@@ -105,7 +105,8 @@ function setPaused(p) { paused = p; document.documentElement.classList.toggle('p
 addEventListener('message', e => { const d = e.data && e.data.demo; if (d === 'play') { held = true; setPaused(false); } else if (d === 'pause') { held = false; setPaused(true); } });
 // 등장 애니메이션이 끝난 뒤 첫 장면에서 멈춘다
 if (STILL) setTimeout(() => { if (!held) setPaused(true); }, 2500);
-const fit = c => { const r = c.getBoundingClientRect(); c.width = Math.max(1, r.width * dpr); c.height = Math.max(1, r.height * dpr); return [r.width, r.height]; };
+// k: 해상도 배율. 흐릿한 배경은 0.5로 그려도 차이가 거의 없고 비용은 1/4로 줄어든다.
+const fit = (c, k = 1) => { const r = c.getBoundingClientRect(); c.width = Math.max(1, r.width * dpr * k); c.height = Math.max(1, r.height * dpr * k); return [r.width, r.height]; };
 
 const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 const mix = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k);
@@ -124,12 +125,12 @@ const cur = { base: MODES.clear.base.map(hex), orbs: MODES.clear.orbs.map(hex), 
 
 // 배경 캔버스: 마우스 쪽으로 살짝 끌려오는 색 덩어리
 const bg = $('bg'), xb = bg.getContext('2d'); let bW, bH; const ms = { x: .5, y: .5, tx: .5, ty: .5 };
-const sizeB = () => [bW, bH] = fit(bg); sizeB(); addEventListener('resize', () => { sizeB(); sizeF(); sizeS(); sizeV(); });
+const sizeB = () => [bW, bH] = fit(bg, .5); sizeB(); addEventListener('resize', () => { sizeB(); sizeF(); sizeS(); sizeV(); });
 addEventListener('pointermove', e => { ms.tx = e.clientX / innerWidth; ms.ty = e.clientY / innerHeight; });
 loop(t => {
   t /= 1000; const T = MODES[mode]; ms.x += (ms.tx - ms.x) * .05; ms.y += (ms.ty - ms.y) * .05;
   cur.base = cur.base.map((c, i) => mix(c, hex(T.base[i]), .04)); cur.orbs = cur.orbs.map((c, i) => mix(c, hex(T.orbs[i]), .04));
-  xb.setTransform(dpr, 0, 0, dpr, 0, 0);
+  xb.setTransform(dpr * .5, 0, 0, dpr * .5, 0, 0);
   const g = xb.createLinearGradient(0, 0, bW * .4, bH); g.addColorStop(0, rgb(cur.base[0])); g.addColorStop(1, rgb(cur.base[1])); xb.fillStyle = g; xb.fillRect(0, 0, bW, bH);
   cur.orbs.forEach((c, i) => {
     const x = (.5 + .36 * Math.sin(t * .5 + i * 1.9) + (ms.x - .5) * (.15 + i * .06)) * bW, y = (.5 + .36 * Math.cos(t * .42 + i * 2.4) + (ms.y - .5) * (.15 + i * .06)) * bH, r = Math.max(bW, bH) * (.2 + (i % 3) * .06);
@@ -194,10 +195,15 @@ setInterval(() => { if (auto && !paused) setMode(['clear', 'rain', 'snow'][++ai 
 
 // 마우스 위치에 따라 빛 반사 + 살짝 기울기
 document.querySelectorAll('.glass').forEach(el => {
-  el.addEventListener('pointermove', e => { const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+  let ev = null;   // 블러가 걸린 패널이라 마우스 이벤트는 프레임당 한 번만 처리한다
+  const apply = () => {
+    const e = ev; ev = null; if (!e) return;
+    const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
     el.style.setProperty('--mx', x * 100 + '%'); el.style.setProperty('--my', y * 100 + '%');
-    if (!reduce && (el.classList.contains('card') || el.classList.contains('now'))) el.style.transform = `perspective(1000px) rotateX(${(.5 - y) * 4}deg) rotateY(${(x - .5) * 5}deg)`; });
-  el.addEventListener('pointerleave', () => el.style.transform = '');
+    if (!reduce && (el.classList.contains('card') || el.classList.contains('now'))) el.style.transform = `perspective(1000px) rotateX(${(.5 - y) * 4}deg) rotateY(${(x - .5) * 5}deg)`;
+  };
+  el.addEventListener('pointermove', e => { if (!ev) requestAnimationFrame(apply); ev = e; });
+  el.addEventListener('pointerleave', () => { ev = null; el.style.transform = ''; });
 });
 
 // 오디오 비주얼라이저 (소리 없이 모양만)

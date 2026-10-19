@@ -124,7 +124,8 @@ function setPaused(p) { paused = p; document.documentElement.classList.toggle('p
 addEventListener('message', e => { const d = e.data && e.data.demo; if (d === 'play') { held = true; setPaused(false); } else if (d === 'pause') { held = false; setPaused(true); } });
 // 등장 애니메이션이 끝난 뒤 첫 장면에서 멈춘다
 if (STILL) setTimeout(() => { if (!held) setPaused(true); }, 2500);
-const fit = c => { const r = c.getBoundingClientRect(); c.width = Math.max(1, r.width * dpr); c.height = Math.max(1, r.height * dpr); return [r.width, r.height]; };
+// k: 해상도 배율. 흐릿한 배경은 0.5로 그려도 차이가 거의 없고 비용은 1/4로 줄어든다.
+const fit = (c, k = 1) => { const r = c.getBoundingClientRect(); c.width = Math.max(1, r.width * dpr * k); c.height = Math.max(1, r.height * dpr * k); return [r.width, r.height]; };
 
 
 // 헤드라인을 단어 단위로 쪼개 순서대로 등장시킨다
@@ -132,22 +133,25 @@ const h1 = $('h1'); h1.innerHTML = h1.textContent.split(' ').map((w, i) => `<spa
 
 // 타일 공통: 스포트라이트 좌표 + 틸트
 document.querySelectorAll('.tile').forEach(t => {
-  t.addEventListener('pointermove', e => {
+  let ev = null;   // 마우스 이벤트는 프레임당 한 번만 처리한다
+  const apply = () => {
+    const e = ev; ev = null; if (!e) return;
     const r = t.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
     t.style.setProperty('--mx', x * 100 + '%'); t.style.setProperty('--my', y * 100 + '%');
     if (!reduce) t.style.transform = `perspective(900px) rotateX(${(.5 - y) * 6}deg) rotateY(${(x - .5) * 8}deg) translateY(-3px)`;
-  });
-  t.addEventListener('pointerleave', () => { t.style.transform = ''; });
+  };
+  t.addEventListener('pointermove', e => { if (!ev) requestAnimationFrame(apply); ev = e; });
+  t.addEventListener('pointerleave', () => { ev = null; t.style.transform = ''; });
 });
 
 // A: 흐르는 그라데이션 메시 캔버스 (마우스 쪽으로 살짝 끌려온다)
 const ca = $('mesh'), xa = ca.getContext('2d'); let aW, aH; const m = { x: .5, y: .5, tx: .5, ty: .5 };
-const sizeA = () => [aW, aH] = fit(ca); sizeA(); addEventListener('resize', sizeA);
+const sizeA = () => [aW, aH] = fit(ca, .5); sizeA(); addEventListener('resize', sizeA);
 ca.parentElement.addEventListener('pointermove', e => { const r = ca.getBoundingClientRect(); m.tx = (e.clientX - r.left) / r.width; m.ty = (e.clientY - r.top) / r.height; });
 const cols = ['#ffd36e', '#ff5c7a', '#ff9a62', '#c64bff', '#ff7ab8'];
 loop(t => {
   t /= 1000; m.x += (m.tx - m.x) * .06; m.y += (m.ty - m.y) * .06;
-  xa.setTransform(dpr, 0, 0, dpr, 0, 0); xa.fillStyle = '#ff6b6b'; xa.fillRect(0, 0, aW, aH);
+  xa.setTransform(dpr * .5, 0, 0, dpr * .5, 0, 0); xa.fillStyle = '#ff6b6b'; xa.fillRect(0, 0, aW, aH);
   cols.forEach((c, i) => {
     const x = (.5 + .4 * Math.sin(t * .7 + i * 1.7) + (m.x - .5) * .35) * aW, y = (.5 + .4 * Math.cos(t * .55 + i * 2.3) + (m.y - .5) * .35) * aH, r = Math.max(aW, aH) * .6;
     const g = xa.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, c + 'dd'); g.addColorStop(1, c + '00'); xa.fillStyle = g; xa.fillRect(0, 0, aW, aH);

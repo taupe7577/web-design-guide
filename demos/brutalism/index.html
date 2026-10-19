@@ -129,12 +129,13 @@ const sizeG = () => [gW, gH] = fit(dots); sizeG(); addEventListener('resize', ()
 addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.on = true; });
 document.addEventListener('pointerleave', () => mouse.on = false);
 loop(t => {
-  xg.setTransform(dpr, 0, 0, dpr, 0, 0); xg.clearRect(0, 0, gW, gH); xg.fillStyle = '#000';
+  xg.setTransform(dpr, 0, 0, dpr, 0, 0); xg.clearRect(0, 0, gW, gH); xg.fillStyle = '#000'; xg.beginPath();   // 점 1,400여 개를 경로 하나로 모아 한 번에 채운다
   const ax = mouse.on ? mouse.x : gW * (.5 + .38 * Math.sin(t / 1700)), ay = mouse.on ? mouse.y : gH * (.45 + .3 * Math.cos(t / 1300)), S = 30;
   for (let y = S / 2; y < gH; y += S) for (let x = S / 2; x < gW; x += S) {
     const k = Math.max(0, 1 - Math.hypot(x - ax, y - ay) / 260), w = .5 + .5 * Math.sin(x * .02 + y * .015 + t / 700), r = 1.4 + w * 2.2 + k * k * 11;
-    xg.beginPath(); xg.arc(x, y, r, 0, 7); xg.fill();
+    xg.moveTo(x + r, y); xg.arc(x, y, r, 0, 7);
   }
+  xg.fill();
 });
 
 // 컨페티
@@ -143,9 +144,11 @@ function burst(x, y, n = 46) {
   if (reduce) return; const cols = ['--y', '--p', '--b', '--g'].map(css).concat('#000');
   for (let i = 0; i < n; i++) bits.push({ x, y, vx: (Math.random() - .5) * 17, vy: -4 - Math.random() * 13, s: 7 + Math.random() * 9, a: Math.random() * 6, va: (Math.random() - .5) * .5, c: cols[i % cols.length] });
 }
+let dirty = false;
 loop(() => {
+  if (!bits.length && !dirty) return;   // 그릴 컨페티가 없으면 화면 전체를 매 프레임 지우지 않는다
   xf.setTransform(dpr, 0, 0, dpr, 0, 0); xf.clearRect(0, 0, fW, fH);
-  bits = bits.filter(b => b.y < fH + 30);
+  bits = bits.filter(b => b.y < fH + 30); dirty = bits.length > 0;
   bits.forEach(b => { b.vy += .55; b.x += b.vx; b.y += b.vy; b.vx *= .99; b.a += b.va; xf.save(); xf.translate(b.x, b.y); xf.rotate(b.a); xf.fillStyle = b.c; xf.fillRect(-b.s / 2, -b.s / 2, b.s, b.s); xf.strokeStyle = '#000'; xf.lineWidth = 2; xf.strokeRect(-b.s / 2, -b.s / 2, b.s, b.s); xf.restore(); });
 });
 document.addEventListener('click', e => { if (e.target.closest('.btn, .like')) burst(e.clientX, e.clientY); });

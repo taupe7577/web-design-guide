@@ -91,10 +91,13 @@ function openViewer(i) {
   setWidth('100%');
   frame.src = url(t);
   viewer.showModal();
+  syncHero();   // 뷰어가 열려 있는 동안 뒤쪽 히어로는 멈춘다
 }
 document.querySelector('.seg').addEventListener('click', e => { if (e.target.dataset.w) setWidth(e.target.dataset.w); });
-$('v-close').onclick = () => viewer.close();
-viewer.addEventListener('close', () => { frame.src = 'about:blank'; });
+// 닫는 코드에서 직접 정리하고, Esc 로 닫힌 경우는 close 이벤트로도 정리한다 (두 번 불려도 안전)
+function cleanupViewer() { frame.src = 'about:blank'; syncHero(); }
+$('v-close').onclick = () => { viewer.close(); cleanupViewer(); };
+viewer.addEventListener('close', cleanupViewer);
 
 // 상세 시트 (OTT 스타일): 위에는 살아 있는 페이지 미리보기, 아래에는 디자인 설명
 const detail = $('detail'), dFrame = $('d-frame');
@@ -137,14 +140,24 @@ function openDetail(i) {
 }
 cards.addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openDetail([...cards.children].indexOf(c)); });
 detail.addEventListener('click', e => {
-  if (e.target === detail || e.target.closest('#d-close')) return detail.close();   // 바깥 어두운 영역을 눌러도 닫힌다
+  if (e.target === detail || e.target.closest('#d-close')) return closeDetail();   // 바깥 어두운 영역을 눌러도 닫힌다
   if (e.target.closest('[data-act="play"]')) return openViewer(cur);
   const m = e.target.closest('[data-go]'); if (m) openDetail(+m.dataset.go);
 });
-detail.addEventListener('close', () => {
-  dFrame.src = 'about:blank'; document.body.style.overflow = '';
+// 닫으면 히어로와 '다른 트렌드' 미리보기 iframe 을 모두 제거해 메모리와 타이머를 돌려준다
+function cleanupDetail() {
+  dFrame.src = 'about:blank'; $('d-body').innerHTML = ''; document.body.style.overflow = '';
   history.replaceState(null, '', location.pathname);
-});
+}
+function closeDetail() { detail.close(); cleanupDetail(); }
+detail.addEventListener('close', cleanupDetail);
+
+// 히어로는 시트가 열려 있고, 뷰어가 닫혀 있고, 화면에 보일 때만 재생한다
+const heroEl = document.querySelector('.hero-prev');
+let heroVisible = true;
+function syncHero() { send(heroEl, detail.open && !viewer.open && heroVisible ? 'play' : 'pause'); }
+new IntersectionObserver(es => { heroVisible = es[0].isIntersecting; syncHero(); }, { root: detail, threshold: .12 }).observe(heroEl);
+dFrame.addEventListener('load', syncHero);
 
 // 공유 링크(#bento 등)로 들어오면 상세 시트를 바로 연다
 const first = TRENDS.findIndex(t => '#' + t.slug === location.hash);
