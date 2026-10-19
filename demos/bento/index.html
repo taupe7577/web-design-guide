@@ -77,23 +77,23 @@
 <div class="page">
   <nav><span class="logo">fold.</span><a class="btn" href="#">무료로 시작</a></nav>
   <header class="hero">
-    <h1 id="h1">할 일, 일정, 메모를 한 장에 접어 넣다.</h1>
-    <p>Fold는 흩어진 업무 도구를 하나의 보드로 모아 주는 가상의 생산성 앱입니다. 카드 위에 마우스를 올려 보세요.</p>
+    <h1 id="h1">할 일, 일정, 메모를 한 화면에서 관리합니다.</h1>
+    <p>Fold는 흩어진 업무 도구를 하나의 보드로 모아 주는 가상의 생산성 앱입니다. 각 카드에 마우스를 올려 직접 확인할 수 있습니다.</p>
   </header>
 
   <section class="bento" aria-label="주요 기능">
     <article class="tile a" style="--i:0"><canvas class="bg" id="mesh"></canvas>
-      <span class="live"><i></i>지금 3명이 함께 보는 중</span>
-      <div><h3>오늘 할 일을<br>자동으로 정리해요</h3><p>마감, 중요도, 소요 시간을 보고 하루 순서를 제안합니다.</p></div></article>
+      <span class="live"><i></i>현재 3명이 함께 보고 있습니다</span>
+      <div><h3>오늘 할 일을<br>자동으로 정리합니다</h3><p>마감, 중요도, 소요 시간을 보고 하루 순서를 제안합니다.</p></div></article>
     <article class="tile b" style="--i:1"><div><h3>메모</h3><div class="typing" id="typing"></div></div>
       <div class="chips"><span style="--i:0">회의</span><span style="--i:1">아이디어</span><span style="--i:2">링크</span></div></article>
     <article class="tile c" style="--i:2"><button class="timer" id="timer" aria-label="집중 타이머 시작 또는 일시정지">
       <svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle class="tr" cx="50" cy="50" r="42"/><circle class="pr" id="pr" cx="50" cy="50" r="42"/></svg>
       <div><h3 style="margin-bottom:2px">집중 모드</h3><div class="big" id="clock">25:00</div></div></button>
-      <p id="tp">데모는 20배속 · 눌러서 일시정지</p></article>
-    <article class="tile d" style="--i:3"><div><h3>최근 12주 완료율</h3><p>그래프 위에 마우스를 올려 보세요</p></div>
+      <p id="tp">20배속 데모 · 선택하면 일시정지</p></article>
+    <article class="tile d" style="--i:3"><div><h3>최근 12주 완료율</h3><p>그래프에 마우스를 올리면 주별 수치를 확인할 수 있습니다</p></div>
       <div class="big" id="pct">0%</div><div class="chartwrap"><canvas id="chart"></canvas></div></article>
-    <article class="tile e" style="--i:4"><div><h3>다크 모드</h3><p>스위치를 눌러 보세요</p></div>
+    <article class="tile e" style="--i:4"><div><h3>다크 모드</h3><p>스위치로 화면 테마를 전환합니다</p></div>
       <button class="sw" id="sw" role="switch" aria-checked="false" aria-label="다크 모드"></button></article>
     <article class="tile f" style="--i:5"><div><h3>연동</h3><p>캘린더, 슬랙,<br>깃허브</p></div>
       <div class="orbit" aria-hidden="true"><div class="core">fold</div>
@@ -151,7 +151,7 @@ let li = 0, ci = 0, del = false;
 // C: 집중 타이머 (25분을 75초로 가속)
 const C = 2 * Math.PI * 42, pr = $('pr'); pr.style.strokeDasharray = C;
 let elapsed = 0, running = true, last = 0; const TOTAL = 25 * 60, SPEED = 20;
-$('timer').onclick = () => { running = !running; $('tp').textContent = running ? '데모는 20배속 · 눌러서 일시정지' : '일시정지됨 · 눌러서 다시 시작'; };
+$('timer').onclick = () => { running = !running; $('tp').textContent = running ? '20배속 데모 · 선택하면 일시정지' : '일시정지됨 · 선택하면 다시 시작'; };
 loop(t => {
   const dt = last ? (t - last) / 1000 : 0; last = t;
   if (running && !reduce) elapsed += dt * SPEED; if (elapsed >= TOTAL) elapsed = 0;

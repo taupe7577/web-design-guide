@@ -3,29 +3,29 @@ const TRENDS = [
   {
     slug: 'bento',
     name: '벤토 그리드',
-    summary: '크기가 다른 둥근 카드를 도시락 칸처럼 촘촘히 배치해 정보를 한눈에 보여준다.',
+    summary: '크기가 다른 둥근 카드를 격자로 촘촘히 배치해 여러 정보를 한 화면에 보여줍니다.',
     tags: ['CSS Grid', 'Canvas 차트', '스포트라이트'],
-    when: 'SaaS 소개, 기능 요약, 대시보드형 랜딩처럼 정보 종류가 여럿일 때. (데모: 생산성 앱 랜딩)',
-    tech: ['grid-template-areas 로 칸 배치', 'Canvas 그라데이션 메시 + 실시간 차트', '마우스 따라 움직이는 스포트라이트와 3D 틸트', '타이머 링·궤도·타자기 등 카드별 마이크로 모션', '카드마다 하나의 메시지만'],
-    caution: '칸이 많으면 시선이 흩어진다. 6~8칸 이내, 가장 중요한 칸을 가장 크게.'
+    when: 'SaaS 소개, 기능 요약, 대시보드형 랜딩처럼 전달할 정보의 종류가 많은 화면에 적합합니다. 데모는 생산성 앱 랜딩 페이지입니다.',
+    tech: ['grid-template-areas로 칸 배치', 'Canvas 그라데이션 메시와 실시간 차트', '마우스를 따라 움직이는 스포트라이트와 3D 틸트', '타이머 링, 궤도, 타자기 효과 등 카드별 마이크로 모션', '카드 하나에 메시지 하나만 담는 구성'],
+    caution: '칸이 많으면 시선이 분산되므로 6~8칸 이내로 구성하고, 가장 중요한 정보를 가장 큰 칸에 배치합니다.'
   },
   {
     slug: 'glass',
     name: '글래스모피즘',
-    summary: '반투명 유리판과 배경 블러로 깊이감을 만든다. 애플의 Liquid Glass가 대중화시켰다.',
+    summary: '반투명 유리판과 배경 블러로 깊이감을 표현합니다. 애플의 Liquid Glass 이후 널리 쓰이게 되었습니다.',
     tags: ['backdrop-filter', 'Canvas 파티클', '시각화'],
-    when: '음악·날씨·핀테크 앱처럼 배경에 색이 풍부하고 가벼운 인상을 줄 때. (데모: 날씨+음악 앱)',
-    tech: ['backdrop-filter: blur() saturate()', 'Canvas 로 뒤에서 흐르는 색 덩어리 (마우스에 반응)', '비·눈·햇살 파티클, 오디오 비주얼라이저', '날씨 전환 시 색과 숫자가 부드럽게 보간', '마우스를 따라가는 빛 반사 하이라이트'],
-    caution: '배경이 밝거나 복잡하면 글자가 안 읽힌다. 글자 대비를 꼭 확인하고, 필터 미지원 환경용 불투명 대체색을 둔다.'
+    when: '음악, 날씨, 핀테크 앱처럼 배경 색이 풍부하고 가벼운 인상이 필요한 화면에 적합합니다. 데모는 날씨와 음악 앱입니다.',
+    tech: ['backdrop-filter: blur() saturate()', 'Canvas로 배경에 흐르는 색 덩어리 구현 (마우스에 반응)', '비, 눈, 햇살 파티클과 오디오 비주얼라이저', '날씨 전환 시 색상과 숫자를 부드럽게 보간', '마우스를 따라 움직이는 빛 반사 하이라이트'],
+    caution: '배경이 밝거나 복잡하면 글자를 읽기 어렵습니다. 글자 대비를 반드시 확인하고, 필터를 지원하지 않는 환경을 위해 불투명한 대체색을 지정합니다.'
   },
   {
     slug: 'brutalism',
     name: '네오브루탈리즘',
-    summary: '굵은 검정 테두리, 원색, 딱딱한 그림자로 일부러 거칠고 솔직하게 보이게 한다.',
+    summary: '굵은 검정 테두리, 원색, 블러 없는 그림자로 의도적으로 거칠고 직설적인 인상을 만듭니다.',
     tags: ['굵은 테두리', 'Canvas 하프톤', '드래그 인터랙션'],
-    when: '크리에이터·스타트업·이벤트처럼 개성과 에너지를 강하게 드러내야 할 때. (데모: 음악 페스티벌)',
-    tech: ['border: 3px solid #000 + 블러 없는 오프셋 그림자', 'Canvas 하프톤 점이 마우스 주변에서 커짐', '슬램 인 등장, 글자 튀기, 화면 흔들림', '드래그 스티커, 컨페티, 팔레트 룰렛, 낙서장'],
-    caution: '모든 요소를 거칠게 하면 피곤하다. 대비가 큰 만큼 정보 위계는 더 엄격하게 잡는다.'
+    when: '크리에이터, 스타트업, 이벤트처럼 개성과 에너지를 강하게 드러내야 하는 경우에 적합합니다. 데모는 음악 페스티벌 사이트입니다.',
+    tech: ['border: 3px solid #000과 블러 없는 오프셋 그림자', 'Canvas 하프톤 점이 마우스 주변에서 커지는 효과', '슬램 인 등장, 글자 튀어오름, 화면 흔들림', '드래그 스티커, 컨페티, 팔레트 룰렛, 낙서장'],
+    caution: '모든 요소를 거칠게 처리하면 사용자가 쉽게 피로해집니다. 대비가 강한 만큼 정보 위계는 더 엄격하게 설계합니다.'
   }
 ];
 
@@ -74,10 +74,10 @@ function openViewer(i) {
   $('v-title').textContent = t.name;
   $('v-open').href = url(t);
   $('v-info').innerHTML = `
-    <h3>한 줄 설명</h3><p>${esc(t.summary)}</p>
-    <h3>언제 쓰나</h3><p>${esc(t.when)}</p>
+    <h3>개요</h3><p>${esc(t.summary)}</p>
+    <h3>적합한 상황</h3><p>${esc(t.when)}</p>
     <h3>핵심 기법</h3><ul>${t.tech.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
-    <h3>주의할 점</h3><p>${esc(t.caution)}</p>`;
+    <h3>유의 사항</h3><p>${esc(t.caution)}</p>`;
   setWidth('100%');
   frame.src = url(t);
   viewer.showModal();
@@ -95,14 +95,14 @@ function openDetail(i) {
     <span class="no">TREND ${String(i + 1).padStart(2, '0')}</span>
     <h2>${esc(t.name)}</h2>
     <div class="acts">
-      <button class="go" data-act="play">▶ 직접 체험하기</button>
+      <button class="go" data-act="play">▶ 데모 체험하기</button>
       <a class="ghost" href="${url(t)}" target="_blank" rel="noopener">새 탭으로 열기 ↗</a>
     </div>`;
   $('d-body').innerHTML = `
     <div class="d-grid">
       <div>
         <p class="d-sum">${esc(t.summary)}</p>
-        <h3>언제 쓰나</h3><p>${esc(t.when)}</p>
+        <h3>적합한 상황</h3><p>${esc(t.when)}</p>
       </div>
       <dl>
         <dt>키워드</dt><dd>${t.tags.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</dd>
@@ -111,7 +111,7 @@ function openDetail(i) {
     </div>
     <h3>핵심 기법</h3>
     <ol class="tech">${t.tech.map((x, n) => `<li><b>${n + 1}</b><span>${esc(x)}</span></li>`).join('')}</ol>
-    <div class="warn"><strong>주의할 점</strong><p>${esc(t.caution)}</p></div>
+    <div class="warn"><strong>유의 사항</strong><p>${esc(t.caution)}</p></div>
     <h3>다른 트렌드</h3>
     <div class="more">${TRENDS.map((o, j) => j === i ? '' : `
       <button class="mini" data-go="${j}">

@@ -18,10 +18,10 @@ http://localhost:8000 에서 확인합니다.
 
 ## 트렌드 추가하기
 
-1. `demos/<slug>/index.html` 을 만든다 (단독으로 열리는 한 장짜리 페이지).
-2. `assets/guide.js` 의 `TRENDS` 배열에 항목을 추가한다.
+1. `demos/<slug>/index.html`을 만듭니다. 단독으로 열리는 한 장짜리 페이지여야 합니다.
+2. `assets/guide.js`의 `TRENDS` 배열에 항목을 추가합니다.
 
 ## 배포 (GitHub Pages)
 
 `main` 브랜치에 push 하면 `.github/workflows/pages.yml` 이 자동 배포합니다.
-처음 한 번만 저장소 **Settings → Pages → Source** 를 **GitHub Actions** 로 바꿔 주세요.
+처음 한 번만 저장소의 **Settings → Pages → Source**를 **GitHub Actions**로 변경합니다.

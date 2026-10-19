@@ -74,11 +74,11 @@
     <section class="glass now" style="--i:1"><canvas id="fx"></canvas>
       <div><div class="label">서울 · 지금</div><div class="temp"><span id="temp">0</span>°</div>
         <h1 class="fade" id="title">맑음</h1><p class="fade" id="desc"></p></div>
-      <a class="glass btn" href="#" style="animation:none">오늘 코디 추천 보기</a>
+      <a class="glass btn" href="#" style="animation:none">오늘의 옷차림 추천 보기</a>
     </section>
     <section class="glass card" style="--i:2"><h2>시간별 예보</h2>
       <div class="spark"><canvas id="spark"></canvas></div><div class="hours" id="hours"></div></section>
-    <section class="glass card" id="pcard" style="--i:3"><h2>지금 어울리는 음악 <small style="font-weight:400;opacity:.7">· 시각화 데모(소리 없음)</small></h2>
+    <section class="glass card" id="pcard" style="--i:3"><h2>날씨 맞춤 음악 <small style="font-weight:400;opacity:.7">· 시각화 데모(소리 없음)</small></h2>
       <div class="player"><div class="cover"></div><div class="info"><strong class="fade" id="song">Golden Hour</strong><small>Aura Sessions</small></div>
         <button class="play" id="play" aria-label="재생 또는 일시정지"></button></div>
       <div class="viz"><canvas id="viz"></canvas></div>
@@ -98,11 +98,11 @@ const mix = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k);
 const rgb = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
 
 const MODES = {
-  clear: { temp: 24, title: '맑음', desc: '햇살 좋은 오후, 선글라스를 챙기세요', song: 'Golden Hour', hrs: [24, 25, 26, 25, 23, 21, 19, 18],
+  clear: { temp: 24, title: '맑음', desc: '맑고 햇살이 좋은 오후입니다. 선글라스 착용을 권장합니다', song: 'Golden Hour', hrs: [24, 25, 26, 25, 23, 21, 19, 18],
     base: ['#1e3a8a', '#7c3aed'], orbs: ['#fbbf24', '#fb7185', '#38bdf8', '#f472b6', '#fde68a'] },
-  rain:  { temp: 17, title: '비', desc: '오후 내내 이어져요. 우산 필수', song: 'Blue Hour', hrs: [17, 16, 16, 15, 15, 14, 14, 13],
+  rain:  { temp: 17, title: '비', desc: '오후 내내 비가 이어집니다. 우산이 필요합니다', song: 'Blue Hour', hrs: [17, 16, 16, 15, 15, 14, 14, 13],
     base: ['#0b1220', '#1e3a5f'], orbs: ['#38bdf8', '#6366f1', '#0ea5e9', '#818cf8', '#22d3ee'] },
-  snow:  { temp: -2, title: '눈', desc: '길이 미끄러워요. 천천히 걸으세요', song: 'Silent Snow', hrs: [-2, -3, -3, -4, -4, -5, -4, -3],
+  snow:  { temp: -2, title: '눈', desc: '도로가 미끄럽습니다. 보행에 주의가 필요합니다', song: 'Silent Snow', hrs: [-2, -3, -3, -4, -4, -5, -4, -3],
     base: ['#1e293b', '#475569'], orbs: ['#e0f2fe', '#a5b4fc', '#f1f5f9', '#7dd3fc', '#c7d2fe'] }
 };
 let mode = 'clear';
