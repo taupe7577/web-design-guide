@@ -28,7 +28,6 @@ h1 { margin: 0 0 16px; font-size: clamp(34px, 6vw, 64px); line-height: 1.1; lett
 .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 6px; }
 .tags span { font-size: 12px; border: 1px solid var(--line); border-radius: 99px; padding: 2px 10px; color: var(--muted); }
 
-.foot { padding: 24px 0 56px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); }
 
 .viewer { width: 100vw; height: 100vh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: var(--bg); color: var(--fg); }
 .viewer[open] { display: flex; flex-direction: column; }

@@ -9,6 +9,7 @@
   body.dark { --bg:#0e0e12; --card:#1b1b22; --fg:#f4f3ee; --muted:#9a9aa6; --chip:#2a2a33; --tint-g:#14301f; --tint-v:#241f4a; --dark-tile:#000; --spot:rgba(255,255,255,.12); }
   * { box-sizing:border-box; }
   body { word-break: keep-all; overflow-wrap: break-word; }
+  html.paused *, html.paused *::before, html.paused *::after { animation-play-state:paused !important; }
   body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif; transition:background .5s, color .5s; }
   .page { max-width:1180px; margin:0 auto; padding:24px 20px 56px; }
   nav { display:flex; align-items:center; justify-content:space-between; padding:8px 4px 32px; }
@@ -70,7 +71,6 @@
   .orbit .rg b { display:grid; place-items:center; width:30px; height:30px; border-radius:50%; background:var(--c); color:#fff; font-size:12px; animation:unspin var(--s) linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
   @keyframes unspin { from { transform:rotate(calc(var(--a)*-1)); } to { transform:rotate(calc(var(--a)*-1 - 360deg)); } }
-  footer { margin-top:40px; text-align:center; color:var(--muted); font-size:13px; }
 
   @media (max-width:860px) { .bento { grid-template-columns:repeat(2,1fr); grid-template-areas:"a a" "b c" "d d" "e f"; } }
   @media (max-width:480px) { .bento { grid-template-columns:1fr; grid-template-areas:"a" "b" "c" "d" "e" "f"; } }
@@ -82,7 +82,7 @@
   <nav><span class="logo">fold.</span><a class="btn" href="#">무료로 시작</a></nav>
   <header class="hero">
     <h1 id="h1">할 일, 일정, 메모를 한 화면에서 관리합니다.</h1>
-    <p>Fold는 흩어진 업무 도구를 하나의 보드로 모아 주는 가상의 생산성 앱입니다. 각 카드에 마우스를 올려 직접 확인할 수 있습니다.</p>
+    <p>흩어진 업무 도구를 하나의 보드로 모아 줍니다.</p>
   </header>
 
   <section class="bento" aria-label="주요 기능">
@@ -94,25 +94,38 @@
     <article class="tile c" style="--i:2"><button class="timer" id="timer" aria-label="집중 타이머 시작 또는 일시정지">
       <svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle class="tr" cx="50" cy="50" r="42"/><circle class="pr" id="pr" cx="50" cy="50" r="42"/></svg>
       <div><h3 style="margin-bottom:2px">집중 모드</h3><div class="big" id="clock">25:00</div></div></button>
-      <p id="tp">20배속 데모 · 선택하면 일시정지</p></article>
-    <article class="tile d" style="--i:3"><div><h3>최근 12주 완료율</h3><p>그래프에 마우스를 올리면 주별 수치를 확인할 수 있습니다</p></div>
+      <p id="tp">선택하면 일시정지</p></article>
+    <article class="tile d" style="--i:3"><div><h3>최근 12주 완료율</h3><p>주간 추이</p></div>
       <div class="big" id="pct">0%</div><div class="chartwrap"><canvas id="chart"></canvas></div></article>
-    <article class="tile e" style="--i:4"><div><h3>다크 모드</h3><p>스위치로 화면 테마를 전환합니다</p></div>
+    <article class="tile e" style="--i:4"><div><h3>다크 모드</h3><p>화면 테마 전환</p></div>
       <button class="sw" id="sw" role="switch" aria-checked="false" aria-label="다크 모드"></button></article>
     <article class="tile f" style="--i:5"><div><h3>연동</h3><p>캘린더, 슬랙,<br>깃허브</p></div>
       <div class="orbit" aria-hidden="true"><div class="core">fold</div>
         <div class="rg" style="--d:74px;--s:12s"><i style="--a:20deg"><b style="--c:#ef4444;--a:20deg">C</b></i><i style="--a:200deg"><b style="--c:#22c55e;--a:200deg">N</b></i></div>
         <div class="rg" style="--d:120px;--s:20s;animation-direction:reverse"><i style="--a:70deg"><b style="--c:#6366f1;--a:70deg">S</b></i><i style="--a:190deg"><b style="--c:#0ea5e9;--a:190deg">G</b></i><i style="--a:310deg"><b style="--c:#f59e0b;--a:310deg">J</b></i></div></div></article>
   </section>
-  <footer>벤토 그리드 데모 · CSS Grid 배치 + Canvas 메시 · 스포트라이트 · 틸트 · 궤도 애니메이션</footer>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const dpr = Math.min(devicePixelRatio || 1, 2);
+const Q = new URLSearchParams(location.search).get('thumb'), THUMB = Q !== null, STILL = Q === 'still';
+const dpr = THUMB ? 1 : Math.min(devicePixelRatio || 1, 2);
+let paused = false, held = false; const kicks = [];
+const loop = fn => {
+  if (reduce) { fn(0); return; }
+  let last = 0, on = false;
+  const tick = t => { if (paused) { on = false; return; } if (!THUMB || t - last >= 32) { last = t; fn(t); } requestAnimationFrame(tick); };
+  const kick = () => { if (!on) { on = true; requestAnimationFrame(tick); } };
+  kicks.push(kick); kick();
+};
+function setPaused(p) { paused = p; document.documentElement.classList.toggle('paused', p); if (!p) kicks.forEach(k => k()); }
+// 부모 페이지(가이드)가 보내는 재생/정지 신호
+addEventListener('message', e => { const d = e.data && e.data.demo; if (d === 'play') { held = true; setPaused(false); } else if (d === 'pause') { held = false; setPaused(true); } });
+// 등장 애니메이션이 끝난 뒤 첫 장면에서 멈춘다
+if (STILL) setTimeout(() => { if (!held) setPaused(true); }, 2500);
 const fit = c => { const r = c.getBoundingClientRect(); c.width = Math.max(1, r.width * dpr); c.height = Math.max(1, r.height * dpr); return [r.width, r.height]; };
-const loop = fn => { if (reduce) { fn(0); return; } const tick = t => { fn(t); requestAnimationFrame(tick); }; requestAnimationFrame(tick); };
+
 
 // 헤드라인을 단어 단위로 쪼개 순서대로 등장시킨다
 const h1 = $('h1'); h1.innerHTML = h1.textContent.split(' ').map((w, i) => `<span class="w" style="--i:${i}">${w}</span>`).join(' ');
@@ -145,6 +158,7 @@ loop(t => {
 const lines = ['3시 디자인 리뷰 준비', '벤토 레이아웃 시안 공유', '금요일까지 견적서 보내기', '새 랜딩 문구 A/B 테스트'];
 let li = 0, ci = 0, del = false;
 (function type() {
+  if (paused) return setTimeout(type, 300);
   const s = lines[li]; $('typing').textContent = reduce ? s : s.slice(0, ci);
   if (reduce) return;
   if (!del && ci === s.length) { del = true; return setTimeout(type, 1400); }
@@ -155,9 +169,9 @@ let li = 0, ci = 0, del = false;
 // C: 집중 타이머 (25분을 75초로 가속)
 const C = 2 * Math.PI * 42, pr = $('pr'); pr.style.strokeDasharray = C;
 let elapsed = 0, running = true, last = 0; const TOTAL = 25 * 60, SPEED = 20;
-$('timer').onclick = () => { running = !running; $('tp').textContent = running ? '20배속 데모 · 선택하면 일시정지' : '일시정지됨 · 선택하면 다시 시작'; };
+$('timer').onclick = () => { running = !running; $('tp').textContent = running ? '선택하면 일시정지' : '일시정지됨 · 선택하면 다시 시작'; };
 loop(t => {
-  const dt = last ? (t - last) / 1000 : 0; last = t;
+  const dt = last ? Math.min(.1, (t - last) / 1000) : 0; last = t;
   if (running && !reduce) elapsed += dt * SPEED; if (elapsed >= TOTAL) elapsed = 0;
   const left = Math.ceil(TOTAL - elapsed), mm = String(Math.floor(left / 60)).padStart(2, '0'), ss = String(left % 60).padStart(2, '0');
   $('clock').textContent = `${mm}:${ss}`; pr.style.strokeDashoffset = C * (elapsed / TOTAL);

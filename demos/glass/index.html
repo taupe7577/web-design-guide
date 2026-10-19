@@ -7,6 +7,7 @@
 <style>
   * { box-sizing:border-box; }
   body { word-break: keep-all; overflow-wrap: break-word; }
+  html.paused *, html.paused *::before, html.paused *::after { animation-play-state:paused !important; }
   body { margin:0; min-height:100vh; color:#fff; overflow-x:hidden; background:#1e3a8a; font:16px/1.5 system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif; text-shadow:0 1px 12px rgba(10,5,40,.25); }
   /* 뒤에서 움직이는 색 덩어리. 유리 패널이 이걸 블러해서 깊이감이 생긴다 */
   #bg { position:fixed; inset:0; width:100%; height:100%; z-index:0; }
@@ -58,7 +59,6 @@
   .viz { height:64px; margin-top:12px; } .viz canvas { width:100%; height:100%; display:block; }
   .time { display:flex; justify-content:space-between; font-size:12px; opacity:.8; font-variant-numeric:tabular-nums; margin-top:4px; }
   .prog { height:5px; border-radius:9px; background:rgba(255,255,255,.25); margin-top:6px; overflow:hidden; } .prog i { display:block; height:100%; width:0; background:#fff; border-radius:9px; }
-  footer { text-align:center; margin-top:30px; font-size:13px; opacity:.75; }
   @media (max-width:760px) { .grid { grid-template-columns:1fr; } .now { grid-row:auto; min-height:380px; } #clock, .logo { display:none; } nav { justify-content:center; } }
   @media (prefers-reduced-motion:reduce) { *, *::after { animation:none !important; transition:none !important; } }
 </style>
@@ -79,21 +79,34 @@
     </section>
     <section class="glass card" style="--i:2"><h2>시간별 예보</h2>
       <div class="spark"><canvas id="spark"></canvas></div><div class="hours" id="hours"></div></section>
-    <section class="glass card" id="pcard" style="--i:3"><h2>날씨 맞춤 음악 <small style="font-weight:400;opacity:.7">· 시각화 데모(소리 없음)</small></h2>
+    <section class="glass card" id="pcard" style="--i:3"><h2>날씨 맞춤 음악</h2>
       <div class="player"><div class="cover"></div><div class="info"><strong class="fade" id="song">Golden Hour</strong><small>Aura Sessions</small></div>
         <button class="play" id="play" aria-label="재생 또는 일시정지"></button></div>
       <div class="viz"><canvas id="viz"></canvas></div>
       <div class="prog"><i id="bar"></i></div><div class="time"><span id="cur">0:00</span><span>3:24</span></div></section>
   </div>
-  <footer>글래스모피즘 데모 · backdrop-filter + Canvas 배경 · 날씨 파티클 · 오디오 비주얼라이저</footer>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const dpr = Math.min(devicePixelRatio || 1, 2);
+const Q = new URLSearchParams(location.search).get('thumb'), THUMB = Q !== null, STILL = Q === 'still';
+const dpr = THUMB ? 1 : Math.min(devicePixelRatio || 1, 2);
+let paused = false, held = false; const kicks = [];
+const loop = fn => {
+  if (reduce) { fn(0); return; }
+  let last = 0, on = false;
+  const tick = t => { if (paused) { on = false; return; } if (!THUMB || t - last >= 32) { last = t; fn(t); } requestAnimationFrame(tick); };
+  const kick = () => { if (!on) { on = true; requestAnimationFrame(tick); } };
+  kicks.push(kick); kick();
+};
+function setPaused(p) { paused = p; document.documentElement.classList.toggle('paused', p); if (!p) kicks.forEach(k => k()); }
+// 부모 페이지(가이드)가 보내는 재생/정지 신호
+addEventListener('message', e => { const d = e.data && e.data.demo; if (d === 'play') { held = true; setPaused(false); } else if (d === 'pause') { held = false; setPaused(true); } });
+// 등장 애니메이션이 끝난 뒤 첫 장면에서 멈춘다
+if (STILL) setTimeout(() => { if (!held) setPaused(true); }, 2500);
 const fit = c => { const r = c.getBoundingClientRect(); c.width = Math.max(1, r.width * dpr); c.height = Math.max(1, r.height * dpr); return [r.width, r.height]; };
-const loop = fn => { if (reduce) { fn(0); return; } const tick = t => { fn(t); requestAnimationFrame(tick); }; requestAnimationFrame(tick); };
+
 const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 const mix = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k);
 const rgb = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
@@ -177,7 +190,7 @@ $('seg').addEventListener('click', e => { if (e.target.dataset.m) setMode(e.targ
 $('title').textContent = MODES.clear.title; $('desc').textContent = MODES.clear.desc;
 // 데모 자동 전환: 사용자가 만지기 전에는 8초마다 날씨가 바뀐다
 let auto = !reduce, ai = 0; document.addEventListener('pointerdown', () => auto = false);
-setInterval(() => { if (auto) setMode(['clear', 'rain', 'snow'][++ai % 3]); }, 8000);
+setInterval(() => { if (auto && !paused) setMode(['clear', 'rain', 'snow'][++ai % 3]); }, 8000);
 
 // 마우스 위치에 따라 빛 반사 + 살짝 기울기
 document.querySelectorAll('.glass').forEach(el => {
@@ -194,7 +207,7 @@ const ICON = { pause: '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" heig
 const paintPlay = () => { $('play').innerHTML = playing ? ICON.pause : ICON.play; $('pcard').classList.toggle('paused', !playing); }; paintPlay();
 $('play').onclick = () => { playing = !playing; paintPlay(); };
 loop(t => {
-  const s = t / 1000, dt = lastV ? (t - lastV) / 1000 : 0; lastV = t;
+  const s = t / 1000, dt = lastV ? Math.min(.1, (t - lastV) / 1000) : 0; lastV = t;
   if (playing) played = (played + dt) % 204; $('bar').style.width = played / 204 * 100 + '%'; $('cur').textContent = `${Math.floor(played / 60)}:${String(Math.floor(played % 60)).padStart(2, '0')}`;
   xv.setTransform(dpr, 0, 0, dpr, 0, 0); xv.clearRect(0, 0, vW, vH);
   const beat = Math.pow(Math.abs(Math.sin(s * 3.6)), 8), bw = vW / N;

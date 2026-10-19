@@ -31,12 +31,14 @@ const TRENDS = [
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const url = t => `demos/${t.slug}/index.html`;
+// 미리보기는 경량 모드(30fps, 해상도 1)로 불러온다. still 은 첫 장면에서 멈춰 있다가 마우스를 올릴 때만 움직인다.
+const still = t => url(t) + '?thumb=still';
 
 const cards = document.getElementById('cards');
 cards.innerHTML = TRENDS.map((t, i) => `
   <article class="card">
     <button class="thumb" data-fit data-i="${i}" aria-label="${esc(t.name)} 상세 보기">
-      <iframe data-src="${url(t)}" title="${esc(t.name)} 미리보기" tabindex="-1" loading="lazy"></iframe>
+      <iframe data-src="${still(t)}" title="${esc(t.name)} 미리보기" tabindex="-1" loading="lazy"></iframe>
     </button>
     <div class="meta">
       <span class="no">TREND ${String(i + 1).padStart(2, '0')}</span>
@@ -61,6 +63,14 @@ const io = new IntersectionObserver(es => es.forEach(e => {
   if (e.isIntersecting) { const f = e.target.querySelector('iframe'); f.src = f.dataset.src; io.unobserve(e.target); }
 }), { rootMargin: '200px' });
 document.querySelectorAll('.thumb').forEach(t => io.observe(t));
+
+// 미리보기 재생 제어: 마우스를 올린(또는 포커스된) 하나만 움직인다
+const send = (el, demo) => { const f = el.querySelector('iframe'); if (f && f.contentWindow) f.contentWindow.postMessage({ demo }, '*'); };
+const preview = e => e.target.closest('.thumb, .mini');
+document.addEventListener('pointerover', e => { const el = preview(e); if (el && !el.contains(e.relatedTarget)) send(el, 'play'); });
+document.addEventListener('pointerout', e => { const el = preview(e); if (el && !el.contains(e.relatedTarget)) send(el, 'pause'); });
+document.addEventListener('focusin', e => { const el = preview(e); if (el) send(el, 'play'); });
+document.addEventListener('focusout', e => { const el = preview(e); if (el) send(el, 'pause'); });
 
 // 뷰어
 const $ = id => document.getElementById(id);
@@ -115,10 +125,11 @@ function openDetail(i) {
     <h3>다른 트렌드</h3>
     <div class="more">${TRENDS.map((o, j) => j === i ? '' : `
       <button class="mini" data-go="${j}">
-        <span class="mini-prev" data-fit><iframe src="${url(o)}" title="${esc(o.name)} 미리보기" tabindex="-1"></iframe></span>
+        <span class="mini-prev" data-fit><iframe src="${still(o)}" title="${esc(o.name)} 미리보기" tabindex="-1"></iframe></span>
         <span class="mini-name">${esc(o.name)}</span>
       </button>`).join('')}</div>`;
-  dFrame.src = url(t);
+  dFrame.src = url(t) + '?thumb';   // 시트의 히어로는 계속 재생하되 경량 모드로 돌린다
+  document.querySelectorAll('.thumb').forEach(th => send(th, 'pause'));   // 뒤쪽 카드는 확실히 멈춘다
   if (!detail.open) { detail.showModal(); document.body.style.overflow = 'hidden'; }
   detail.scrollTop = 0;
   history.replaceState(null, '', '#' + t.slug);

@@ -8,6 +8,7 @@
   :root { --ink:#000; --paper:#fffdf2; --y:#ffe14d; --p:#ff6bb5; --b:#5cc8ff; --g:#7dff9b; --bw:3px; --sh:6px 6px 0 var(--ink); }
   * { box-sizing:border-box; }
   body { word-break: keep-all; overflow-wrap: break-word; }
+  html.paused *, html.paused *::before, html.paused *::after { animation-play-state:paused !important; }
   body { margin:0; background:var(--paper); color:var(--ink); overflow-x:hidden; font:600 17px/1.45 "Space Grotesk",system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif; }
   body.shake { animation:shake .45s; }
   @keyframes shake { 20% { transform:translate(-8px,4px) rotate(-.4deg); } 40% { transform:translate(7px,-5px) rotate(.4deg); } 60% { transform:translate(-5px,-3px); } 80% { transform:translate(4px,3px); } }
@@ -66,7 +67,6 @@
   .sign { display:flex; flex-direction:column; gap:12px; justify-content:center; }
   .sign input { border:var(--bw) solid var(--ink); padding:12px 14px; font:inherit; background:var(--paper); width:100%; }
   .sign input:focus { outline:4px solid var(--b); outline-offset:0; }
-  footer { margin-top:30px; font-size:14px; }
   a:focus-visible, button:focus-visible { outline:4px solid var(--b); outline-offset:3px; }
   @media (max-width:820px) { .hero, .studio, .lineup { grid-template-columns:1fr; } .st1 { left:62%; } }
   @media (prefers-reduced-motion:reduce) { *, body.shake { animation:none !important; transition:none !important; } }
@@ -80,13 +80,13 @@
 
   <header class="hero">
     <h1 id="h1">Make <mark>noise</mark> in Seoul.</h1>
-    <div class="ticket"><div>가상의 인디 음악 페스티벌 · 개막까지</div><div class="date" id="date">--</div>
+    <div class="ticket"><div>PUNCH FEST · 개막까지</div><div class="date" id="date">--</div>
       <div class="cd" role="timer" aria-label="개막까지 남은 시간"><div><b id="cd">0</b><small>DAYS</small></div><div><b id="ch">0</b><small>HRS</small></div><div><b id="cm">0</b><small>MIN</small></div><div><b id="cs">0</b><small>SEC</small></div></div>
       <a class="btn" href="#">티켓 받기 →</a></div>
     <div class="sticker st1">free<br>zine!</div><div class="sticker st2">new!</div><div class="sticker st3">all ages ★</div>
   </header>
 
-  <div class="marquee" aria-hidden="true"><span>LIVE · LOUD · LOCAL · 3 STAGES · 24 ARTISTS · FREE ZINE · DRAG THE STICKERS · LIVE · LOUD · LOCAL ·</span></div>
+  <div class="marquee" aria-hidden="true"><span>LIVE · LOUD · LOCAL · 3 STAGES · 24 ARTISTS · FREE ZINE · LIVE · LOUD · LOCAL ·</span></div>
 
   <section class="lineup" aria-label="라인업">
     <article class="box" style="--i:0"><small>STAGE A · 14:00</small><h2>Cat Static</h2><p>거친 기타 사운드와 따라 부르기 쉬운 후렴이 특징입니다.</p><button class="like" type="button">♥ <b>47</b></button></article>
@@ -95,19 +95,32 @@
   </section>
 
   <section class="studio">
-    <div class="pad"><h3>포스터 낙서장</h3><p>마우스나 터치로 직접 그릴 수 있습니다. 조작하기 전에는 자동으로 그려집니다.</p><canvas id="pad"></canvas>
+    <div class="pad"><h3>포스터 낙서장</h3><p>마우스나 터치로 자유롭게 그릴 수 있습니다.</p><canvas id="pad"></canvas>
       <div class="tools" id="tools"><button class="sw on" style="background:#000" data-c="#000" aria-label="검정"></button><button class="sw" style="background:var(--p)" data-v="--p" aria-label="분홍"></button><button class="sw" style="background:var(--b)" data-v="--b" aria-label="파랑"></button><button class="sw" style="background:var(--g)" data-v="--g" aria-label="초록"></button><button class="btn" id="clear" type="button" style="margin-left:auto;padding:4px 14px">지우기</button></div></div>
-    <div class="sign"><h3>소식 받기</h3><p>구독 버튼을 누르면 컨페티 효과가 나타납니다.</p><input type="email" placeholder="이메일 주소" aria-label="이메일 주소"><button class="btn p" type="button">구독</button></div>
+    <div class="sign"><h3>소식 받기</h3><p>새 소식을 이메일로 보내 드립니다.</p><input type="email" placeholder="이메일 주소" aria-label="이메일 주소"><button class="btn p" type="button">구독</button></div>
   </section>
-  <footer>네오브루탈리즘 데모 · 3px 테두리 · 블러 없는 그림자 · Canvas 하프톤 · 드래그 스티커 · 컨페티</footer>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const dpr = Math.min(devicePixelRatio || 1, 2);
+const Q = new URLSearchParams(location.search).get('thumb'), THUMB = Q !== null, STILL = Q === 'still';
+const dpr = THUMB ? 1 : Math.min(devicePixelRatio || 1, 2);
+let paused = false, held = false; const kicks = [];
+const loop = fn => {
+  if (reduce) { fn(0); return; }
+  let last = 0, on = false;
+  const tick = t => { if (paused) { on = false; return; } if (!THUMB || t - last >= 32) { last = t; fn(t); } requestAnimationFrame(tick); };
+  const kick = () => { if (!on) { on = true; requestAnimationFrame(tick); } };
+  kicks.push(kick); kick();
+};
+function setPaused(p) { paused = p; document.documentElement.classList.toggle('paused', p); if (!p) kicks.forEach(k => k()); }
+// 부모 페이지(가이드)가 보내는 재생/정지 신호
+addEventListener('message', e => { const d = e.data && e.data.demo; if (d === 'play') { held = true; setPaused(false); } else if (d === 'pause') { held = false; setPaused(true); } });
+// 등장 애니메이션이 끝난 뒤 첫 장면에서 멈춘다
+if (STILL) setTimeout(() => { if (!held) setPaused(true); }, 2500);
 const fit = c => { const r = c.getBoundingClientRect(); c.width = Math.max(1, r.width * dpr); c.height = Math.max(1, r.height * dpr); return [r.width, r.height]; };
-const loop = fn => { if (reduce) { fn(0); return; } const tick = t => { fn(t); requestAnimationFrame(tick); }; requestAnimationFrame(tick); };
+
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
 // 하프톤 점 배경: 마우스가 없으면 알아서 떠다니는 지점을 따라 커진다
@@ -156,7 +169,7 @@ document.addEventListener('click', e => { if (e.target.closest('.btn, .like')) b
 const chars = [...document.querySelectorAll('#h1 .ch')];
 const jump = el => { el.style.setProperty('--r', (Math.random() * 30 - 15) + 'deg'); el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); };
 chars.forEach(c => c.addEventListener('pointerenter', () => jump(c)));
-if (!reduce) setInterval(() => jump(chars[Math.floor(Math.random() * chars.length)]), 700);
+if (!reduce) setInterval(() => { if (!paused) jump(chars[Math.floor(Math.random() * chars.length)]); }, 700);
 
 // 개막 카운트다운 (올해 11월 21일 14시, 지났으면 내년)
 let target = new Date(new Date().getFullYear(), 10, 21, 14); if (target < new Date()) target = new Date(target.getFullYear() + 1, 10, 21, 14);
