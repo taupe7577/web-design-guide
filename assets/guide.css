@@ -5,6 +5,7 @@
   :root { --bg: #101014; --fg: #f1f0ec; --muted: #9b9ba6; --card: #1a1a20; --line: #2c2c35; --accent: #8b85ff; }
 }
 * { box-sizing: border-box; }
+body { word-break: keep-all; overflow-wrap: break-word; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
 .wrap { width: min(1120px, 100% - 32px); margin-inline: auto; }
 

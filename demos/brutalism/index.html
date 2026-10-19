@@ -7,6 +7,7 @@
 <style>
   :root { --ink:#000; --paper:#fffdf2; --y:#ffe14d; --p:#ff6bb5; --b:#5cc8ff; --g:#7dff9b; --bw:3px; --sh:6px 6px 0 var(--ink); }
   * { box-sizing:border-box; }
+  body { word-break: keep-all; overflow-wrap: break-word; }
   body { margin:0; background:var(--paper); color:var(--ink); overflow-x:hidden; font:600 17px/1.45 "Space Grotesk",system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif; }
   body.shake { animation:shake .45s; }
   @keyframes shake { 20% { transform:translate(-8px,4px) rotate(-.4deg); } 40% { transform:translate(7px,-5px) rotate(.4deg); } 60% { transform:translate(-5px,-3px); } 80% { transform:translate(4px,3px); } }
