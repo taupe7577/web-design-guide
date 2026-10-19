@@ -127,7 +127,7 @@ function openDetail(i) {
 cards.addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openDetail([...cards.children].indexOf(c)); });
 detail.addEventListener('click', e => {
   if (e.target === detail || e.target.closest('#d-close')) return detail.close();   // 바깥 어두운 영역을 눌러도 닫힌다
-  if (e.target.closest('[data-act="play"]') || e.target.closest('.hero-prev') && !e.target.closest('a')) return openViewer(cur);
+  if (e.target.closest('[data-act="play"]')) return openViewer(cur);
   const m = e.target.closest('[data-go]'); if (m) openDetail(+m.dataset.go);
 });
 detail.addEventListener('close', () => {
