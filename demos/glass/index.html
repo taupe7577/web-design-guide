@@ -92,7 +92,9 @@ const $ = id => document.getElementById(id);
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const Q = new URLSearchParams(location.search).get('thumb'), THUMB = Q !== null, STILL = Q === 'still';
 const dpr = THUMB ? 1 : Math.min(devicePixelRatio || 1, 2);
-let paused = false, held = false; const kicks = [];
+let paused = false, held = false; const kicks = [], timers = [], onResume = [];
+// setInterval 대신 every 를 쓰면 정지할 때 타이머가 실제로 꺼지고, 재생하면 다시 켜진다
+const every = (fn, ms) => { let id = null; const start = () => { if (id === null) id = setInterval(fn, ms); }; const stop = () => { clearInterval(id); id = null; }; timers.push({ start, stop }); if (!paused) start(); };
 const loop = fn => {
   if (reduce) { fn(0); return; }
   let last = 0, on = false;
@@ -100,7 +102,11 @@ const loop = fn => {
   const kick = () => { if (!on) { on = true; requestAnimationFrame(tick); } };
   kicks.push(kick); kick();
 };
-function setPaused(p) { paused = p; document.documentElement.classList.toggle('paused', p); if (!p) kicks.forEach(k => k()); }
+function setPaused(p) {
+  paused = p; document.documentElement.classList.toggle('paused', p);
+  timers.forEach(t => p ? t.stop() : t.start());
+  if (!p) { kicks.forEach(k => k()); onResume.forEach(f => f()); }   // 재생하면 멈춰 있던 값(시계 등)을 즉시 맞춘다
+}
 // 부모 페이지(가이드)가 보내는 재생/정지 신호
 addEventListener('message', e => { const d = e.data && e.data.demo; if (d === 'play') { held = true; setPaused(false); } else if (d === 'pause') { held = false; setPaused(true); } });
 // 등장 애니메이션이 끝난 뒤 첫 장면에서 멈춘다
@@ -177,7 +183,7 @@ loop(t => {
 
 // 현재 기온 숫자 카운트 + 시계
 loop(() => { cur.temp += (MODES[mode].temp - cur.temp) * .08; $('temp').textContent = Math.round(cur.temp); });
-const tick = () => { const d = new Date(); $('clock').textContent = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }); }; tick(); setInterval(tick, 10000);
+const tick = () => { const d = new Date(); $('clock').textContent = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }); }; tick(); every(tick, 10000); onResume.push(tick);
 
 // 날씨 전환
 function setMode(m) {
@@ -191,7 +197,7 @@ $('seg').addEventListener('click', e => { if (e.target.dataset.m) setMode(e.targ
 $('title').textContent = MODES.clear.title; $('desc').textContent = MODES.clear.desc;
 // 데모 자동 전환: 사용자가 만지기 전에는 8초마다 날씨가 바뀐다
 let auto = !reduce, ai = 0; document.addEventListener('pointerdown', () => auto = false);
-setInterval(() => { if (auto && !paused) setMode(['clear', 'rain', 'snow'][++ai % 3]); }, 8000);
+every(() => { if (auto) setMode(['clear', 'rain', 'snow'][++ai % 3]); }, 8000);
 
 // 마우스 위치에 따라 빛 반사 + 살짝 기울기
 document.querySelectorAll('.glass').forEach(el => {

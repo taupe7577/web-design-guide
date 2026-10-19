@@ -106,7 +106,9 @@ const $ = id => document.getElementById(id);
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const Q = new URLSearchParams(location.search).get('thumb'), THUMB = Q !== null, STILL = Q === 'still';
 const dpr = THUMB ? 1 : Math.min(devicePixelRatio || 1, 2);
-let paused = false, held = false; const kicks = [];
+let paused = false, held = false; const kicks = [], timers = [], onResume = [];
+// setInterval 대신 every 를 쓰면 정지할 때 타이머가 실제로 꺼지고, 재생하면 다시 켜진다
+const every = (fn, ms) => { let id = null; const start = () => { if (id === null) id = setInterval(fn, ms); }; const stop = () => { clearInterval(id); id = null; }; timers.push({ start, stop }); if (!paused) start(); };
 const loop = fn => {
   if (reduce) { fn(0); return; }
   let last = 0, on = false;
@@ -114,7 +116,11 @@ const loop = fn => {
   const kick = () => { if (!on) { on = true; requestAnimationFrame(tick); } };
   kicks.push(kick); kick();
 };
-function setPaused(p) { paused = p; document.documentElement.classList.toggle('paused', p); if (!p) kicks.forEach(k => k()); }
+function setPaused(p) {
+  paused = p; document.documentElement.classList.toggle('paused', p);
+  timers.forEach(t => p ? t.stop() : t.start());
+  if (!p) { kicks.forEach(k => k()); onResume.forEach(f => f()); }   // 재생하면 멈춰 있던 값(시계 등)을 즉시 맞춘다
+}
 // 부모 페이지(가이드)가 보내는 재생/정지 신호
 addEventListener('message', e => { const d = e.data && e.data.demo; if (d === 'play') { held = true; setPaused(false); } else if (d === 'pause') { held = false; setPaused(true); } });
 // 등장 애니메이션이 끝난 뒤 첫 장면에서 멈춘다
@@ -172,7 +178,7 @@ document.addEventListener('click', e => { if (e.target.closest('.btn, .like')) b
 const chars = [...document.querySelectorAll('#h1 .ch')];
 const jump = el => { el.style.setProperty('--r', (Math.random() * 30 - 15) + 'deg'); el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); };
 chars.forEach(c => c.addEventListener('pointerenter', () => jump(c)));
-if (!reduce) setInterval(() => { if (!paused) jump(chars[Math.floor(Math.random() * chars.length)]); }, 700);
+if (!reduce) every(() => jump(chars[Math.floor(Math.random() * chars.length)]), 700);
 
 // 개막 카운트다운 (올해 11월 21일 14시, 지났으면 내년)
 let target = new Date(new Date().getFullYear(), 10, 21, 14); if (target < new Date()) target = new Date(target.getFullYear() + 1, 10, 21, 14);
@@ -182,7 +188,7 @@ function countdown() {
   let s = Math.max(0, Math.floor((target - new Date()) / 1000)); const v = { cd: Math.floor(s / 86400), ch: Math.floor(s % 86400 / 3600), cm: Math.floor(s % 3600 / 60), cs: s % 60 };
   for (const k in v) { const el = $(k); if (prev[k] !== v[k]) { el.textContent = String(v[k]).padStart(2, '0'); if (prev[k] !== undefined) { el.classList.remove('s'); void el.offsetWidth; el.classList.add('s'); } prev[k] = v[k]; } }
 }
-countdown(); setInterval(countdown, 1000);
+countdown(); every(countdown, 1000); onResume.push(countdown);
 
 // 드래그 스티커
 document.querySelectorAll('.sticker').forEach(s => {

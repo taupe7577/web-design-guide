@@ -111,7 +111,9 @@ const $ = id => document.getElementById(id);
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const Q = new URLSearchParams(location.search).get('thumb'), THUMB = Q !== null, STILL = Q === 'still';
 const dpr = THUMB ? 1 : Math.min(devicePixelRatio || 1, 2);
-let paused = false, held = false; const kicks = [];
+let paused = false, held = false; const kicks = [], timers = [], onResume = [];
+// setInterval 대신 every 를 쓰면 정지할 때 타이머가 실제로 꺼지고, 재생하면 다시 켜진다
+const every = (fn, ms) => { let id = null; const start = () => { if (id === null) id = setInterval(fn, ms); }; const stop = () => { clearInterval(id); id = null; }; timers.push({ start, stop }); if (!paused) start(); };
 const loop = fn => {
   if (reduce) { fn(0); return; }
   let last = 0, on = false;
@@ -119,7 +121,11 @@ const loop = fn => {
   const kick = () => { if (!on) { on = true; requestAnimationFrame(tick); } };
   kicks.push(kick); kick();
 };
-function setPaused(p) { paused = p; document.documentElement.classList.toggle('paused', p); if (!p) kicks.forEach(k => k()); }
+function setPaused(p) {
+  paused = p; document.documentElement.classList.toggle('paused', p);
+  timers.forEach(t => p ? t.stop() : t.start());
+  if (!p) { kicks.forEach(k => k()); onResume.forEach(f => f()); }   // 재생하면 멈춰 있던 값(시계 등)을 즉시 맞춘다
+}
 // 부모 페이지(가이드)가 보내는 재생/정지 신호
 addEventListener('message', e => { const d = e.data && e.data.demo; if (d === 'play') { held = true; setPaused(false); } else if (d === 'pause') { held = false; setPaused(true); } });
 // 등장 애니메이션이 끝난 뒤 첫 장면에서 멈춘다
@@ -160,14 +166,15 @@ loop(t => {
 
 // B: 타자 치는 메모
 const lines = ['3시 디자인 리뷰 준비', '벤토 레이아웃 시안 공유', '금요일까지 견적서 보내기', '새 랜딩 문구 A/B 테스트'];
-let li = 0, ci = 0, del = false;
+let li = 0, ci = 0, del = false, typeT = null;
 (function type() {
-  if (paused) return setTimeout(type, 300);
   const s = lines[li]; $('typing').textContent = reduce ? s : s.slice(0, ci);
   if (reduce) return;
-  if (!del && ci === s.length) { del = true; return setTimeout(type, 1400); }
+  if (!del && ci === s.length) { del = true; typeT = setTimeout(type, 1400); return; }
   if (del && ci === 0) { del = false; li = (li + 1) % lines.length; }
-  ci += del ? -1 : 1; setTimeout(type, del ? 28 : 70);
+  ci += del ? -1 : 1; typeT = setTimeout(type, del ? 28 : 70);
+  // 정지하면 다음 글자 예약을 취소하고, 재생하면 이어서 다시 시작한다
+  if (!timers.some(t => t.typing)) timers.push({ typing: true, stop: () => { clearTimeout(typeT); typeT = null; }, start: () => { if (typeT === null) type(); } });
 })();
 
 // C: 집중 타이머 (25분을 75초로 가속)
