@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fold · 벤토 그리드 데모</title>
+<style>
+  :root { --bg:#eceae4; --card:#fff; --fg:#17171c; --muted:#6b6b76; --chip:#f1f0ec; --tint-g:#dff3e4; --tint-v:#e6e4ff; --dark-tile:#17171c; --spot:rgba(255,255,255,.7); --r:28px; --gap:16px; }
+  body.dark { --bg:#0e0e12; --card:#1b1b22; --fg:#f4f3ee; --muted:#9a9aa6; --chip:#2a2a33; --tint-g:#14301f; --tint-v:#241f4a; --dark-tile:#000; --spot:rgba(255,255,255,.12); }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif; transition:background .5s, color .5s; }
+  .page { max-width:1180px; margin:0 auto; padding:24px 20px 56px; }
+  nav { display:flex; align-items:center; justify-content:space-between; padding:8px 4px 32px; }
+  .logo { font-weight:800; font-size:22px; letter-spacing:-.04em; }
+  nav a.btn { background:var(--fg); color:var(--bg); text-decoration:none; padding:10px 18px; border-radius:99px; font-size:14px; font-weight:600; }
+  .hero { max-width:760px; padding:0 4px 32px; }
+  .hero h1 { margin:0 0 14px; font-size:clamp(36px,6vw,68px); line-height:1.05; letter-spacing:-.04em; }
+  .hero h1 .w { display:inline-block; animation:wordIn .8s cubic-bezier(.2,.9,.2,1) backwards; animation-delay:calc(var(--i)*70ms); }
+  @keyframes wordIn { from { opacity:0; transform:translateY(.6em) rotate(3deg); filter:blur(8px); } }
+  .hero p { margin:0; color:var(--muted); font-size:18px; animation:wordIn .9s .6s backwards; }
+
+  .bento { display:grid; gap:var(--gap); grid-template-columns:repeat(4,1fr); grid-auto-rows:minmax(170px,auto);
+    grid-template-areas:"a a b c" "a a d d" "e f d d"; }
+  .tile { background:var(--card); border-radius:var(--r); padding:26px; position:relative; overflow:hidden; isolation:isolate; display:flex; flex-direction:column; justify-content:space-between;
+    transition:transform .25s ease, background .5s; will-change:transform; animation:rise .8s cubic-bezier(.2,.9,.2,1) backwards; animation-delay:calc(.3s + var(--i)*90ms); }
+  @keyframes rise { from { opacity:0; transform:translateY(40px) scale(.94); } }
+  /* 마우스를 따라다니는 스포트라이트 */
+  .tile::before { content:""; position:absolute; inset:0; z-index:1; pointer-events:none; opacity:0; transition:opacity .3s;
+    background:radial-gradient(320px circle at var(--mx,50%) var(--my,50%), var(--spot), transparent 65%); }
+  .tile:hover::before { opacity:1; }
+  .tile > :not(canvas) { position:relative; z-index:2; }
+  canvas.bg { position:absolute; inset:0; width:100%; height:100%; z-index:0; }
+  .tile h3 { margin:0 0 6px; font-size:20px; letter-spacing:-.02em; }
+  .tile p { margin:0; color:var(--muted); font-size:14px; }
+  .a { grid-area:a; color:#fff; } .a h3 { font-size:36px; line-height:1.08; letter-spacing:-.03em; text-shadow:0 2px 20px rgba(0,0,0,.18); }
+  .a p { color:rgba(255,255,255,.92); font-size:16px; max-width:30ch; }
+  .a .live { display:inline-flex; align-items:center; gap:8px; align-self:flex-start; background:rgba(255,255,255,.22); backdrop-filter:blur(8px); padding:6px 14px; border-radius:99px; font-size:13px; font-weight:600; }
+  .live i { width:8px; height:8px; border-radius:50%; background:#fff; animation:pulse 1.4s infinite; }
+  @keyframes pulse { 50% { transform:scale(1.9); opacity:.2; } }
+  .b { grid-area:b; } .c { grid-area:c; background:var(--dark-tile); color:#fff; } .c p { color:#a9a9b5; }
+  .d { grid-area:d; background:var(--tint-g); } .e { grid-area:e; background:var(--tint-v); } .f { grid-area:f; }
+  .big { font-size:54px; font-weight:800; letter-spacing:-.04em; line-height:1; font-variant-numeric:tabular-nums; }
+  .typing { min-height:44px; font-size:15px; font-weight:600; }
+  .typing::after { content:"▍"; margin-left:2px; animation:blink 1s steps(1) infinite; color:#7c6cf0; }
+  @keyframes blink { 50% { opacity:0; } }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chips span { background:var(--chip); border-radius:99px; padding:4px 12px; font-size:13px; animation:bob 3.4s ease-in-out infinite; animation-delay:calc(var(--i)*-.8s); }
+  @keyframes bob { 50% { transform:translateY(-4px); } }
+  /* 타이머 링 */
+  .timer { display:flex; align-items:center; gap:16px; cursor:pointer; background:none; border:0; padding:0; color:inherit; font:inherit; text-align:left; }
+  .ring { width:92px; height:92px; flex:none; transform:rotate(-90deg); }
+  .ring circle { fill:none; stroke-width:7; } .ring .tr { stroke:rgba(255,255,255,.14); } .ring .pr { stroke:#ffb86b; stroke-linecap:round; }
+  .timer .big { font-size:34px; }
+  /* 차트 */
+  .chartwrap { position:relative; flex:1; min-height:150px; margin-top:8px; }
+  .chartwrap canvas { position:absolute; inset:0; width:100%; height:100%; }
+  /* 다크 모드 스위치 */
+  .sw { width:64px; height:36px; border-radius:99px; border:0; background:#7c6cf0; position:relative; cursor:pointer; transition:background .3s; }
+  .sw::after { content:""; position:absolute; top:4px; left:4px; width:28px; height:28px; border-radius:50%; background:#fff; transition:transform .45s cubic-bezier(.3,1.6,.5,1); }
+  body.dark .sw::after { transform:translateX(28px); } body.dark .sw { background:#3d3a66; }
+  /* 연동 궤도 */
+  .orbit { position:absolute !important; right:-50px; top:50%; width:210px; height:210px; margin-top:-105px; z-index:1 !important; }
+  .orbit .core { position:absolute; inset:0; margin:auto; width:46px; height:46px; border-radius:50%; background:var(--fg); color:var(--bg); display:grid; place-items:center; font-weight:800; font-size:14px; }
+  .orbit .rg { position:absolute; inset:0; margin:auto; width:var(--d); height:var(--d); border:1px dashed var(--muted); border-radius:50%; opacity:.9; animation:spin var(--s) linear infinite; }
+  .orbit .rg i { position:absolute; top:50%; left:50%; width:30px; height:30px; margin:-15px; transform:rotate(var(--a)) translateX(calc(var(--d)/2)); }
+  .orbit .rg b { display:grid; place-items:center; width:30px; height:30px; border-radius:50%; background:var(--c); color:#fff; font-size:12px; animation:unspin var(--s) linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes unspin { from { transform:rotate(calc(var(--a)*-1)); } to { transform:rotate(calc(var(--a)*-1 - 360deg)); } }
+  footer { margin-top:40px; text-align:center; color:var(--muted); font-size:13px; }
+
+  @media (max-width:860px) { .bento { grid-template-columns:repeat(2,1fr); grid-template-areas:"a a" "b c" "d d" "e f"; } }
+  @media (max-width:480px) { .bento { grid-template-columns:1fr; grid-template-areas:"a" "b" "c" "d" "e" "f"; } .f .orbit { right:-70px; } }
+  @media (prefers-reduced-motion:reduce) { *, *::before { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <nav><span class="logo">fold.</span><a class="btn" href="#">무료로 시작</a></nav>
+  <header class="hero">
+    <h1 id="h1">할 일, 일정, 메모를 한 장에 접어 넣다.</h1>
+    <p>Fold는 흩어진 업무 도구를 하나의 보드로 모아 주는 가상의 생산성 앱입니다. 카드 위에 마우스를 올려 보세요.</p>
+  </header>
+
+  <section class="bento" aria-label="주요 기능">
+    <article class="tile a" style="--i:0"><canvas class="bg" id="mesh"></canvas>
+      <span class="live"><i></i>지금 3명이 함께 보는 중</span>
+      <div><h3>오늘 할 일을<br>자동으로 정리해요</h3><p>마감, 중요도, 소요 시간을 보고 하루 순서를 제안합니다.</p></div></article>
+    <article class="tile b" style="--i:1"><div><h3>메모</h3><div class="typing" id="typing"></div></div>
+      <div class="chips"><span style="--i:0">회의</span><span style="--i:1">아이디어</span><span style="--i:2">링크</span></div></article>
+    <article class="tile c" style="--i:2"><button class="timer" id="timer" aria-label="집중 타이머 시작 또는 일시정지">
+      <svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle class="tr" cx="50" cy="50" r="42"/><circle class="pr" id="pr" cx="50" cy="50" r="42"/></svg>
+      <div><h3 style="margin-bottom:2px">집중 모드</h3><div class="big" id="clock">25:00</div></div></button>
+      <p id="tp">데모는 20배속 · 눌러서 일시정지</p></article>
+    <article class="tile d" style="--i:3"><div><h3>최근 12주 완료율</h3><p>그래프 위에 마우스를 올려 보세요</p></div>
+      <div class="big" id="pct">0%</div><div class="chartwrap"><canvas id="chart"></canvas></div></article>
+    <article class="tile e" style="--i:4"><div><h3>다크 모드</h3><p>스위치를 눌러 보세요</p></div>
+      <button class="sw" id="sw" role="switch" aria-checked="false" aria-label="다크 모드"></button></article>
+    <article class="tile f" style="--i:5"><div><h3>연동</h3><p>캘린더, 슬랙,<br>깃허브</p></div>
+      <div class="orbit" aria-hidden="true"><div class="core">fold</div>
+        <div class="rg" style="--d:100px;--s:12s"><i style="--a:20deg"><b style="--c:#ef4444;--a:20deg">C</b></i><i style="--a:200deg"><b style="--c:#22c55e;--a:200deg">N</b></i></div>
+        <div class="rg" style="--d:178px;--s:20s;animation-direction:reverse"><i style="--a:70deg"><b style="--c:#6366f1;--a:70deg">S</b></i><i style="--a:190deg"><b style="--c:#0ea5e9;--a:190deg">G</b></i><i style="--a:310deg"><b style="--c:#f59e0b;--a:310deg">J</b></i></div></div></article>
+  </section>
+  <footer>벤토 그리드 데모 · CSS Grid 배치 + Canvas 메시 · 스포트라이트 · 틸트 · 궤도 애니메이션</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const dpr = Math.min(devicePixelRatio || 1, 2);
+const fit = c => { const r = c.getBoundingClientRect(); c.width = Math.max(1, r.width * dpr); c.height = Math.max(1, r.height * dpr); return [r.width, r.height]; };
+const loop = fn => { if (reduce) { fn(0); return; } const tick = t => { fn(t); requestAnimationFrame(tick); }; requestAnimationFrame(tick); };
+
+// 헤드라인을 단어 단위로 쪼개 순서대로 등장시킨다
+const h1 = $('h1'); h1.innerHTML = h1.textContent.split(' ').map((w, i) => `<span class="w" style="--i:${i}">${w}</span>`).join(' ');
+
+// 타일 공통: 스포트라이트 좌표 + 틸트
+document.querySelectorAll('.tile').forEach(t => {
+  t.addEventListener('pointermove', e => {
+    const r = t.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+    t.style.setProperty('--mx', x * 100 + '%'); t.style.setProperty('--my', y * 100 + '%');
+    if (!reduce) t.style.transform = `perspective(900px) rotateX(${(.5 - y) * 6}deg) rotateY(${(x - .5) * 8}deg) translateY(-3px)`;
+  });
+  t.addEventListener('pointerleave', () => { t.style.transform = ''; });
+});
+
+// A: 흐르는 그라데이션 메시 캔버스 (마우스 쪽으로 살짝 끌려온다)
+const ca = $('mesh'), xa = ca.getContext('2d'); let aW, aH; const m = { x: .5, y: .5, tx: .5, ty: .5 };
+const sizeA = () => [aW, aH] = fit(ca); sizeA(); addEventListener('resize', sizeA);
+ca.parentElement.addEventListener('pointermove', e => { const r = ca.getBoundingClientRect(); m.tx = (e.clientX - r.left) / r.width; m.ty = (e.clientY - r.top) / r.height; });
+const cols = ['#ffd36e', '#ff5c7a', '#ff9a62', '#c64bff', '#ff7ab8'];
+loop(t => {
+  t /= 1000; m.x += (m.tx - m.x) * .06; m.y += (m.ty - m.y) * .06;
+  xa.setTransform(dpr, 0, 0, dpr, 0, 0); xa.fillStyle = '#ff6b6b'; xa.fillRect(0, 0, aW, aH);
+  cols.forEach((c, i) => {
+    const x = (.5 + .4 * Math.sin(t * .7 + i * 1.7) + (m.x - .5) * .35) * aW, y = (.5 + .4 * Math.cos(t * .55 + i * 2.3) + (m.y - .5) * .35) * aH, r = Math.max(aW, aH) * .6;
+    const g = xa.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, c + 'dd'); g.addColorStop(1, c + '00'); xa.fillStyle = g; xa.fillRect(0, 0, aW, aH);
+  });
+});
+
+// B: 타자 치는 메모
+const lines = ['3시 디자인 리뷰 준비', '벤토 레이아웃 시안 공유', '금요일까지 견적서 보내기', '새 랜딩 문구 A/B 테스트'];
+let li = 0, ci = 0, del = false;
+(function type() {
+  const s = lines[li]; $('typing').textContent = reduce ? s : s.slice(0, ci);
+  if (reduce) return;
+  if (!del && ci === s.length) { del = true; return setTimeout(type, 1400); }
+  if (del && ci === 0) { del = false; li = (li + 1) % lines.length; }
+  ci += del ? -1 : 1; setTimeout(type, del ? 28 : 70);
+})();
+
+// C: 집중 타이머 (25분을 75초로 가속)
+const C = 2 * Math.PI * 42, pr = $('pr'); pr.style.strokeDasharray = C;
+let elapsed = 0, running = true, last = 0; const TOTAL = 25 * 60, SPEED = 20;
+$('timer').onclick = () => { running = !running; $('tp').textContent = running ? '데모는 20배속 · 눌러서 일시정지' : '일시정지됨 · 눌러서 다시 시작'; };
+loop(t => {
+  const dt = last ? (t - last) / 1000 : 0; last = t;
+  if (running && !reduce) elapsed += dt * SPEED; if (elapsed >= TOTAL) elapsed = 0;
+  const left = Math.ceil(TOTAL - elapsed), mm = String(Math.floor(left / 60)).padStart(2, '0'), ss = String(left % 60).padStart(2, '0');
+  $('clock').textContent = `${mm}:${ss}`; pr.style.strokeDashoffset = C * (elapsed / TOTAL);
+});
+
+// D: 주간 완료율 차트 (등장 애니메이션 + 주기적 데이터 변화 + 호버 툴팁)
+const cd = $('chart'), xd = cd.getContext('2d'); let dW, dH, hover = -1;
+const sizeD = () => [dW, dH] = fit(cd); sizeD(); addEventListener('resize', sizeD);
+const gen = () => Array.from({ length: 12 }, (_, i) => 38 + i * 3.4 + Math.random() * 18);
+let data = gen().map(() => 0), target = gen(), t0 = null, tl = 0;
+cd.addEventListener('pointermove', e => { const r = cd.getBoundingClientRect(); hover = Math.round((e.clientX - r.left) / r.width * 11); });
+cd.addEventListener('pointerleave', () => hover = -1);
+loop(t => {
+  if (t0 === null) t0 = t; if (!reduce && t - tl > 5000) { target = gen(); tl = t; }
+  data = data.map((v, i) => reduce ? target[i] : v + (target[i] - v) * .05);
+  const ease = reduce ? 1 : 1 - Math.pow(1 - Math.min(1, (t - t0) / 1400), 3);
+  xd.setTransform(dpr, 0, 0, dpr, 0, 0); xd.clearRect(0, 0, dW, dH);
+  const pts = data.map((v, i) => [i * dW / 11, dH - 10 - (v / 100) * (dH - 28) * ease]);
+  const path = () => { xd.beginPath(); xd.moveTo(...pts[0]); for (let i = 1; i < pts.length; i++) { const [px, py] = pts[i - 1], [x, y] = pts[i], mx = (px + x) / 2; xd.bezierCurveTo(mx, py, mx, y, x, y); } };
+  path(); xd.lineTo(dW, dH); xd.lineTo(0, dH); xd.closePath();
+  const g = xd.createLinearGradient(0, 0, 0, dH); g.addColorStop(0, 'rgba(47,158,91,.45)'); g.addColorStop(1, 'rgba(47,158,91,0)'); xd.fillStyle = g; xd.fill();
+  path(); xd.strokeStyle = '#2f9e5b'; xd.lineWidth = 3; xd.lineCap = 'round'; xd.stroke();
+  const L = pts[11]; xd.fillStyle = '#2f9e5b'; xd.beginPath(); xd.arc(L[0] - 4, L[1], 5, 0, 7); xd.fill();
+  if (!reduce) { const p = (t / 1000 % 1.6) / 1.6; xd.strokeStyle = `rgba(47,158,91,${1 - p})`; xd.lineWidth = 2; xd.beginPath(); xd.arc(L[0] - 4, L[1], 5 + p * 16, 0, 7); xd.stroke(); }
+  if (hover >= 0 && hover < 12) {
+    const [hx, hy] = pts[hover]; xd.strokeStyle = 'rgba(47,158,91,.5)'; xd.lineWidth = 1; xd.beginPath(); xd.moveTo(hx, 0); xd.lineTo(hx, dH); xd.stroke();
+    xd.fillStyle = '#fff'; xd.strokeStyle = '#2f9e5b'; xd.lineWidth = 3; xd.beginPath(); xd.arc(hx, hy, 6, 0, 7); xd.fill(); xd.stroke();
+    const txt = `${12 - hover}주 전 · ${Math.round(data[hover])}%`; xd.font = '600 12px system-ui'; const w = xd.measureText(txt).width + 20, bx = Math.min(Math.max(hx - w / 2, 0), dW - w), by = Math.max(hy - 38, 0);
+    xd.fillStyle = '#17171c'; xd.beginPath(); xd.roundRect(bx, by, w, 26, 8); xd.fill(); xd.fillStyle = '#fff'; xd.fillText(txt, bx + 10, by + 17);
+  }
+  $('pct').textContent = Math.round(data[11] * ease) + '%';
+});
+
+// E: 다크 모드 스위치
+$('sw').onclick = e => { const d = document.body.classList.toggle('dark'); e.currentTarget.setAttribute('aria-checked', d); };
+</script>
+</body>
+</html>

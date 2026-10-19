@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>웹 디자인 가이드 · 트렌드별 데모</title>
+  <meta name="description" content="최신 웹 디자인 트렌드 3가지를 트렌드마다 실제 동작하는 웹사이트 하나로 보여주는 가이드.">
+  <link rel="stylesheet" href="assets/guide.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <p class="eyebrow">Web Design Guide · 2026</p>
+      <h1>트렌드 하나, 웹사이트 하나.</h1>
+      <p class="lead">설명만 읽지 말고 직접 눌러 보세요. 아래 카드마다 해당 트렌드로 만든 실제 사이트가 들어 있습니다.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="cards" class="cards" aria-label="디자인 트렌드 목록"></section>
+  </main>
+
+  <footer class="wrap foot">
+    <p>데모는 모두 이 저장소에서 직접 만든 정적 페이지입니다. 외부 사이트를 복제하지 않았습니다.</p>
+  </footer>
+
+  <dialog id="viewer" class="viewer" aria-label="데모 보기">
+    <div class="viewer-bar">
+      <strong id="v-title"></strong>
+      <div class="seg" role="group" aria-label="화면 크기">
+        <button data-w="100%" class="on">데스크톱</button>
+        <button data-w="768px">태블릿</button>
+        <button data-w="390px">모바일</button>
+      </div>
+      <a id="v-open" target="_blank" rel="noopener">새 탭으로 열기 ↗</a>
+      <button id="v-close" aria-label="닫기">닫기 ✕</button>
+    </div>
+    <div class="viewer-body">
+      <aside id="v-info"></aside>
+      <div class="stage"><iframe id="v-frame" title="데모 미리보기"></iframe></div>
+    </div>
+  </dialog>
+
+  <script src="assets/guide.js"></script>
+</body>
+</html>

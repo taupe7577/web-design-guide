@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PUNCH Fest · 네오브루탈리즘 데모</title>
+<style>
+  :root { --ink:#000; --paper:#fffdf2; --y:#ffe14d; --p:#ff6bb5; --b:#5cc8ff; --g:#7dff9b; --bw:3px; --sh:6px 6px 0 var(--ink); }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); overflow-x:hidden; font:600 17px/1.45 "Space Grotesk",system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif; }
+  body.shake { animation:shake .45s; }
+  @keyframes shake { 20% { transform:translate(-8px,4px) rotate(-.4deg); } 40% { transform:translate(7px,-5px) rotate(.4deg); } 60% { transform:translate(-5px,-3px); } 80% { transform:translate(4px,3px); } }
+  /* 마우스 근처에서 커지는 하프톤 점 */
+  #dots { position:fixed; inset:0; width:100%; height:100%; z-index:0; opacity:.2; pointer-events:none; }
+  #fx { position:fixed; inset:0; width:100%; height:100%; z-index:50; pointer-events:none; }
+  .page { position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:20px 20px 48px; }
+  nav { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; }
+  .logo { background:var(--ink); color:var(--y); padding:6px 14px; font-weight:900; font-size:22px; letter-spacing:.02em; transform:rotate(-2deg); transition:color .3s; animation:slam .6s cubic-bezier(.2,1.6,.4,1) backwards; }
+  nav ul { display:flex; gap:10px; list-style:none; margin:0; padding:0; flex-wrap:wrap; }
+  .btn { display:inline-block; color:var(--ink); background:var(--y); border:var(--bw) solid var(--ink); box-shadow:var(--sh); padding:10px 18px; font:inherit; font-weight:800; text-decoration:none; cursor:pointer; transition:transform .1s, box-shadow .1s, background .3s; }
+  .btn:hover { transform:translate(3px,3px); box-shadow:3px 3px 0 var(--ink); }
+  .btn:active { transform:translate(6px,6px); box-shadow:0 0 0 var(--ink); }
+  .btn.p { background:var(--p); } .btn.b { background:var(--b); } .btn.g { background:var(--g); }
+  nav .btn { animation:slam .6s cubic-bezier(.2,1.6,.4,1) backwards; }
+  @keyframes slam { from { opacity:0; transform:translateY(-70px) rotate(8deg) scale(1.3); } }
+
+  .hero { position:relative; margin:40px 0 30px; display:grid; grid-template-columns:1.4fr 1fr; gap:24px; align-items:stretch; }
+  h1 { margin:0; font-size:clamp(52px,10vw,124px); line-height:.9; letter-spacing:-.04em; font-weight:900; text-transform:uppercase; }
+  h1 .ch { display:inline-block; cursor:default; }
+  h1 .ch.hit { animation:hit .55s cubic-bezier(.2,1.8,.4,1); }
+  @keyframes hit { 30% { transform:translateY(-.16em) rotate(var(--r)) scale(1.15); } }
+  h1 mark { background:var(--y); padding:0 .1em; box-shadow:var(--sh); display:inline-block; transform:rotate(-1.5deg); transition:background .3s; animation:slam .7s .2s cubic-bezier(.2,1.6,.4,1) backwards; }
+  .ticket { background:var(--p); border:var(--bw) solid var(--ink); box-shadow:var(--sh); padding:22px; display:flex; flex-direction:column; justify-content:space-between; gap:14px; transform:rotate(1.5deg); transition:background .3s; animation:slam .7s .35s cubic-bezier(.2,1.6,.4,1) backwards; }
+  .ticket .date { font-size:44px; font-weight:900; line-height:1; text-transform:uppercase; }
+  .cd { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .cd div { background:var(--paper); border:var(--bw) solid var(--ink); text-align:center; padding:6px 0 4px; }
+  .cd b { display:block; font-size:30px; line-height:1; font-variant-numeric:tabular-nums; } .cd small { font-size:11px; font-weight:800; letter-spacing:.1em; }
+  .cd b.s { animation:tick .3s cubic-bezier(.2,1.8,.4,1); } @keyframes tick { from { transform:translateY(-14px) scale(1.3); } }
+
+  .sticker { position:absolute; z-index:5; display:grid; place-items:center; text-align:center; font-weight:900; text-transform:uppercase; line-height:1; cursor:grab; touch-action:none; user-select:none; animation:wob 3s ease-in-out infinite; }
+  .sticker.drag { cursor:grabbing; animation:none; transform:scale(1.12) rotate(-6deg); filter:drop-shadow(8px 8px 0 #000); }
+  @keyframes wob { 50% { transform:rotate(7deg) scale(1.05); } }
+  .st1 { left:44%; top:-44px; width:118px; height:118px; background:var(--g); font-size:15px; clip-path:polygon(50% 0%,61% 20%,82% 10%,80% 33%,100% 39%,86% 56%,98% 77%,75% 78%,70% 100%,50% 86%,30% 100%,25% 78%,2% 77%,14% 56%,0% 39%,20% 33%,18% 10%,39% 20%); }
+  .st2 { left:2%; bottom:-30px; width:92px; height:92px; border-radius:50%; background:var(--b); border:var(--bw) solid #000; box-shadow:var(--sh); font-size:20px; animation-delay:-1s; transform:rotate(-12deg); }
+  .st3 { left:40%; bottom:-24px; padding:8px 14px; background:var(--y); border:var(--bw) solid #000; box-shadow:var(--sh); font-size:15px; animation-delay:-2s; }
+
+  .marquee { position:relative; margin-top:44px; border:var(--bw) solid var(--ink); background:var(--ink); color:var(--y); overflow:hidden; white-space:nowrap; font-weight:900; font-size:20px; padding:8px 0; transform:rotate(-1deg); }
+  .marquee span { display:inline-block; padding-left:100%; animation:run 20s linear infinite; }
+  @keyframes run { to { transform:translateX(-100%); } }
+
+  .lineup { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-top:34px; }
+  .box { border:var(--bw) solid var(--ink); box-shadow:var(--sh); padding:20px; background:#fff; transition:transform .15s, background .3s; animation:slam .6s cubic-bezier(.2,1.6,.4,1) backwards; animation-delay:calc(.5s + var(--i)*.12s); }
+  .box:hover { transform:translate(-3px,-3px) rotate(-.8deg); }
+  .box:nth-child(1){background:var(--b)} .box:nth-child(2){background:var(--g)} .box:nth-child(3){background:var(--y)}
+  .box small { font-weight:800; letter-spacing:.1em; } .box h2 { margin:6px 0 8px; font-size:32px; line-height:1; text-transform:uppercase; } .box p { margin:0 0 14px; }
+  .like { background:#fff; border:var(--bw) solid #000; padding:4px 12px; font:inherit; font-weight:800; cursor:pointer; box-shadow:3px 3px 0 #000; }
+  .like:active { transform:translate(3px,3px); box-shadow:none; } .like.pop b { display:inline-block; animation:tick .3s cubic-bezier(.2,1.8,.4,1); }
+
+  .studio { margin-top:40px; display:grid; grid-template-columns:1.4fr 1fr; gap:24px; }
+  .pad, .sign { border:var(--bw) solid var(--ink); box-shadow:var(--sh); padding:20px; background:#fff; }
+  .pad h3, .sign h3 { margin:0 0 4px; font-size:24px; text-transform:uppercase; } .pad p, .sign p { margin:0 0 12px; font-size:14px; }
+  .pad canvas { display:block; width:100%; height:210px; border:var(--bw) solid #000; background:var(--paper); touch-action:none; cursor:crosshair; }
+  .tools { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .sw { width:34px; height:34px; border:var(--bw) solid #000; cursor:pointer; padding:0; } .sw.on { box-shadow:3px 3px 0 #000; transform:translate(-2px,-2px); }
+  .sign { display:flex; flex-direction:column; gap:12px; justify-content:center; }
+  .sign input { border:var(--bw) solid var(--ink); padding:12px 14px; font:inherit; background:var(--paper); width:100%; }
+  .sign input:focus { outline:4px solid var(--b); outline-offset:0; }
+  footer { margin-top:30px; font-size:14px; }
+  a:focus-visible, button:focus-visible { outline:4px solid var(--b); outline-offset:3px; }
+  @media (max-width:820px) { .hero, .studio, .lineup { grid-template-columns:1fr; } .st1 { left:62%; } }
+  @media (prefers-reduced-motion:reduce) { *, body.shake { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<canvas id="dots" aria-hidden="true"></canvas><canvas id="fx" aria-hidden="true"></canvas>
+<div class="page">
+  <nav><span class="logo">PUNCH!</span>
+    <ul><li><a class="btn b" href="#">라인업</a></li><li><a class="btn g" href="#">장소</a></li><li><button class="btn p" id="roll" type="button">COLOR ROLL ↻</button></li></ul></nav>
+
+  <header class="hero">
+    <h1 id="h1">Make <mark>noise</mark> in Seoul.</h1>
+    <div class="ticket"><div>가상의 인디 음악 페스티벌 · 문 열기까지</div><div class="date" id="date">--</div>
+      <div class="cd" role="timer" aria-label="개막까지 남은 시간"><div><b id="cd">0</b><small>DAYS</small></div><div><b id="ch">0</b><small>HRS</small></div><div><b id="cm">0</b><small>MIN</small></div><div><b id="cs">0</b><small>SEC</small></div></div>
+      <a class="btn" href="#">티켓 받기 →</a></div>
+    <div class="sticker st1">free<br>zine!</div><div class="sticker st2">new!</div><div class="sticker st3">all ages ★</div>
+  </header>
+
+  <div class="marquee" aria-hidden="true"><span>LIVE · LOUD · LOCAL · 3 STAGES · 24 ARTISTS · FREE ZINE · DRAG THE STICKERS · LIVE · LOUD · LOCAL ·</span></div>
+
+  <section class="lineup" aria-label="라인업">
+    <article class="box" style="--i:0"><small>STAGE A · 14:00</small><h2>Cat Static</h2><p>지직거리는 기타와 이상하게 따라 부르게 되는 후렴.</p><button class="like" type="button">♥ <b>47</b></button></article>
+    <article class="box" style="--i:1"><small>STAGE B · 17:30</small><h2>Mono Mango</h2><p>신스 두 대와 드럼 머신. 과일 이름치고 꽤 시끄럽다.</p><button class="like" type="button">♥ <b>83</b></button></article>
+    <article class="box" style="--i:2"><small>STAGE C · 20:00</small><h2>The Late Bus</h2><p>막차 시간까지 이어지는 여섯 명의 브라스 밴드.</p><button class="like" type="button">♥ <b>31</b></button></article>
+  </section>
+
+  <section class="studio">
+    <div class="pad"><h3>포스터 낙서장</h3><p>직접 그려 보세요. 손대기 전에는 알아서 낙서합니다.</p><canvas id="pad"></canvas>
+      <div class="tools" id="tools"><button class="sw on" style="background:#000" data-c="#000" aria-label="검정"></button><button class="sw" style="background:var(--p)" data-v="--p" aria-label="분홍"></button><button class="sw" style="background:var(--b)" data-v="--b" aria-label="파랑"></button><button class="sw" style="background:var(--g)" data-v="--g" aria-label="초록"></button><button class="btn" id="clear" type="button" style="margin-left:auto;padding:4px 14px">지우기</button></div></div>
+    <div class="sign"><h3>소식 받기</h3><p>구독하면 컨페티가 터집니다.</p><input type="email" placeholder="이메일 주소" aria-label="이메일 주소"><button class="btn p" type="button">구독</button></div>
+  </section>
+  <footer>네오브루탈리즘 데모 · 3px 테두리 · 블러 없는 그림자 · Canvas 하프톤 · 드래그 스티커 · 컨페티</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const dpr = Math.min(devicePixelRatio || 1, 2);
+const fit = c => { const r = c.getBoundingClientRect(); c.width = Math.max(1, r.width * dpr); c.height = Math.max(1, r.height * dpr); return [r.width, r.height]; };
+const loop = fn => { if (reduce) { fn(0); return; } const tick = t => { fn(t); requestAnimationFrame(tick); }; requestAnimationFrame(tick); };
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+// 하프톤 점 배경: 마우스가 없으면 알아서 떠다니는 지점을 따라 커진다
+const dots = $('dots'), xg = dots.getContext('2d'); let gW, gH; const mouse = { x: 0, y: 0, on: false };
+const sizeG = () => [gW, gH] = fit(dots); sizeG(); addEventListener('resize', () => { sizeG(); sizeP(); sizeF(); });
+addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.on = true; });
+document.addEventListener('pointerleave', () => mouse.on = false);
+loop(t => {
+  xg.setTransform(dpr, 0, 0, dpr, 0, 0); xg.clearRect(0, 0, gW, gH); xg.fillStyle = '#000';
+  const ax = mouse.on ? mouse.x : gW * (.5 + .38 * Math.sin(t / 1700)), ay = mouse.on ? mouse.y : gH * (.45 + .3 * Math.cos(t / 1300)), S = 30;
+  for (let y = S / 2; y < gH; y += S) for (let x = S / 2; x < gW; x += S) {
+    const k = Math.max(0, 1 - Math.hypot(x - ax, y - ay) / 260), w = .5 + .5 * Math.sin(x * .02 + y * .015 + t / 700), r = 1.4 + w * 2.2 + k * k * 11;
+    xg.beginPath(); xg.arc(x, y, r, 0, 7); xg.fill();
+  }
+});
+
+// 컨페티
+const fx = $('fx'), xf = fx.getContext('2d'); let fW, fH, bits = []; const sizeF = () => [fW, fH] = fit(fx); sizeF();
+function burst(x, y, n = 46) {
+  if (reduce) return; const cols = ['--y', '--p', '--b', '--g'].map(css).concat('#000');
+  for (let i = 0; i < n; i++) bits.push({ x, y, vx: (Math.random() - .5) * 17, vy: -4 - Math.random() * 13, s: 7 + Math.random() * 9, a: Math.random() * 6, va: (Math.random() - .5) * .5, c: cols[i % cols.length] });
+}
+loop(() => {
+  xf.setTransform(dpr, 0, 0, dpr, 0, 0); xf.clearRect(0, 0, fW, fH);
+  bits = bits.filter(b => b.y < fH + 30);
+  bits.forEach(b => { b.vy += .55; b.x += b.vx; b.y += b.vy; b.vx *= .99; b.a += b.va; xf.save(); xf.translate(b.x, b.y); xf.rotate(b.a); xf.fillStyle = b.c; xf.fillRect(-b.s / 2, -b.s / 2, b.s, b.s); xf.strokeStyle = '#000'; xf.lineWidth = 2; xf.strokeRect(-b.s / 2, -b.s / 2, b.s, b.s); xf.restore(); });
+});
+document.addEventListener('click', e => { if (e.target.closest('.btn, .like')) burst(e.clientX, e.clientY); });
+
+// 헤드라인: 글자 단위로 쪼개 알아서 튀게 한다 (마우스를 올려도 튄다)
+(function split(node) {
+  [...node.childNodes].forEach(n => {
+    if (n.nodeType === 3) {
+      // 단어를 nowrap 으로 묶어야 글자 사이에서 줄바꿈되지 않는다
+      const f = document.createDocumentFragment();
+      n.textContent.split(/(\s+)/).forEach(w => {
+        if (!w.trim()) { f.append(w); return; }
+        const wd = document.createElement('span'); wd.style.cssText = 'display:inline-block;white-space:nowrap';
+        [...w].forEach(c => { const s = document.createElement('span'); s.className = 'ch'; s.textContent = c; wd.append(s); }); f.append(wd);
+      });
+      n.replaceWith(f);
+    }
+    else split(n);
+  });
+})($('h1'));
+const chars = [...document.querySelectorAll('#h1 .ch')];
+const jump = el => { el.style.setProperty('--r', (Math.random() * 30 - 15) + 'deg'); el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); };
+chars.forEach(c => c.addEventListener('pointerenter', () => jump(c)));
+if (!reduce) setInterval(() => jump(chars[Math.floor(Math.random() * chars.length)]), 700);
+
+// 개막 카운트다운 (올해 11월 21일 14시, 지났으면 내년)
+let target = new Date(new Date().getFullYear(), 10, 21, 14); if (target < new Date()) target = new Date(target.getFullYear() + 1, 10, 21, 14);
+$('date').innerHTML = `${target.getMonth() + 1}.${target.getDate()}<br>${target.toLocaleDateString('en-US', { weekday: 'short' })}`;
+const prev = {};
+function countdown() {
+  let s = Math.max(0, Math.floor((target - new Date()) / 1000)); const v = { cd: Math.floor(s / 86400), ch: Math.floor(s % 86400 / 3600), cm: Math.floor(s % 3600 / 60), cs: s % 60 };
+  for (const k in v) { const el = $(k); if (prev[k] !== v[k]) { el.textContent = String(v[k]).padStart(2, '0'); if (prev[k] !== undefined) { el.classList.remove('s'); void el.offsetWidth; el.classList.add('s'); } prev[k] = v[k]; } }
+}
+countdown(); setInterval(countdown, 1000);
+
+// 드래그 스티커
+document.querySelectorAll('.sticker').forEach(s => {
+  let sx, sy, ol, ot;
+  s.addEventListener('pointerdown', e => { s.setPointerCapture(e.pointerId); s.classList.add('drag'); sx = e.clientX; sy = e.clientY; ol = s.offsetLeft; ot = s.offsetTop; s.style.bottom = 'auto'; s.style.left = ol + 'px'; s.style.top = ot + 'px'; });
+  s.addEventListener('pointermove', e => { if (!s.classList.contains('drag')) return; s.style.left = ol + e.clientX - sx + 'px'; s.style.top = ot + e.clientY - sy + 'px'; });
+  const end = e => { if (s.classList.contains('drag')) { s.classList.remove('drag'); burst(e.clientX, e.clientY, 18); } };
+  s.addEventListener('pointerup', end); s.addEventListener('pointercancel', end);
+});
+
+// 좋아요
+document.querySelectorAll('.like').forEach(b => b.addEventListener('click', () => { const n = b.querySelector('b'); n.textContent = +n.textContent + 1; b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }));
+
+// 팔레트 룰렛
+const PAL = [['#ffe14d', '#ff6bb5', '#5cc8ff', '#7dff9b'], ['#ff9f1c', '#2ec4b6', '#ff5d73', '#cbff8c'], ['#c77dff', '#ffd60a', '#4cc9f0', '#80ed99'], ['#ff6b35', '#f7c6ff', '#9bf6ff', '#caffbf']]; let pi = 0;
+$('roll').onclick = () => { pi = (pi + 1) % PAL.length; ['--y', '--p', '--b', '--g'].forEach((v, i) => document.documentElement.style.setProperty(v, PAL[pi][i]));
+  document.body.classList.remove('shake'); void document.body.offsetWidth; document.body.classList.add('shake'); };
+
+// 낙서장: 직접 그리거나, 손대기 전에는 알아서 그린다
+const pad = $('pad'), xp = pad.getContext('2d'); let pW, pH, brush = '#000', drawing = false, lastPt = null, auto = !reduce;
+const sizeP = () => { [pW, pH] = fit(pad); xp.setTransform(dpr, 0, 0, dpr, 0, 0); xp.lineCap = xp.lineJoin = 'round'; xp.lineWidth = 9; }; sizeP();
+const seg = (a, b, c) => { xp.strokeStyle = c; xp.beginPath(); xp.moveTo(a[0], a[1]); xp.lineTo(b[0], b[1]); xp.stroke(); };
+const pos = e => { const r = pad.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+pad.addEventListener('pointerdown', e => { auto = false; drawing = true; pad.setPointerCapture(e.pointerId); lastPt = pos(e); seg(lastPt, lastPt, brush); });
+pad.addEventListener('pointermove', e => { if (!drawing) return; const p = pos(e); seg(lastPt, p, brush); lastPt = p; });
+['pointerup', 'pointercancel'].forEach(ev => pad.addEventListener(ev, () => drawing = false));
+$('tools').addEventListener('click', e => { const b = e.target.closest('.sw'); if (!b) return; brush = b.dataset.v ? css(b.dataset.v) : b.dataset.c; document.querySelectorAll('.sw').forEach(x => x.classList.toggle('on', x === b)); });
+$('clear').onclick = () => xp.clearRect(0, 0, pW, pH);
+let sp = 0, prevA = null;
+loop(() => {
+  if (!auto) return; sp += .035; const p = [pW * (.5 + .42 * Math.sin(sp * 1.3)), pH * (.5 + .36 * Math.sin(sp * 2.3 + 1))];
+  if (prevA) seg(prevA, p, ['#000', css('--p'), css('--b'), css('--g')][Math.floor(sp / 3) % 4]); prevA = p;
+  if (sp > 12) { xp.clearRect(0, 0, pW, pH); sp = 0; prevA = null; }
+});
+</script>
+</body>
+</html>

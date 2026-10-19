@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aura · 글래스모피즘 데모</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; color:#fff; overflow-x:hidden; background:#1e3a8a; font:16px/1.5 system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif; text-shadow:0 1px 12px rgba(10,5,40,.25); }
+  /* 뒤에서 움직이는 색 덩어리. 유리 패널이 이걸 블러해서 깊이감이 생긴다 */
+  #bg { position:fixed; inset:0; width:100%; height:100%; z-index:0; }
+
+  .glass { position:relative; overflow:hidden; isolation:isolate; border-radius:28px;
+    background:linear-gradient(135deg,rgba(255,255,255,.2),rgba(255,255,255,.06)), rgba(15,10,50,.16);
+    border:1px solid rgba(255,255,255,.3);
+    -webkit-backdrop-filter:blur(24px) saturate(170%); backdrop-filter:blur(24px) saturate(170%);
+    box-shadow:0 10px 40px rgba(8,4,36,.3), inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(255,255,255,.08);
+    transition:transform .3s ease; animation:enter .9s cubic-bezier(.2,.9,.2,1) backwards; animation-delay:calc(var(--i,0)*120ms); }
+  /* 필터 미지원 환경: 불투명 대체색으로 글자 가독성을 지킨다 */
+  @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) { .glass { background:rgba(30,20,80,.88); } }
+  /* 빛 반사: 마우스 위치를 따라다니는 하이라이트 */
+  .glass::after { content:""; position:absolute; inset:0; z-index:1; pointer-events:none; opacity:0; transition:opacity .3s;
+    background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,.28), transparent 65%); }
+  .glass:hover::after { opacity:1; }
+  .glass > *:not(canvas) { position:relative; z-index:2; }
+  @keyframes enter { from { opacity:0; transform:translateY(36px) scale(.95); filter:blur(10px); } }
+
+  .app { position:relative; z-index:1; max-width:1000px; margin:0 auto; padding:22px 20px 40px; }
+  nav { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 14px 10px 24px; border-radius:99px; }
+  .logo { font-weight:800; letter-spacing:-.03em; font-size:20px; }
+  .seg { position:relative; display:grid; grid-template-columns:repeat(3,84px); background:rgba(255,255,255,.12); border-radius:99px; padding:4px; }
+  .seg .pill { position:absolute; top:4px; left:4px; width:84px; height:calc(100% - 8px); border-radius:99px; background:rgba(255,255,255,.3); box-shadow:inset 0 1px 0 rgba(255,255,255,.5); transition:transform .5s cubic-bezier(.3,1.4,.5,1); }
+  .seg button { position:relative; z-index:1; border:0; background:none; color:#fff; font:inherit; font-size:14px; font-weight:600; padding:8px 0; cursor:pointer; text-shadow:inherit; }
+  #clock { font-variant-numeric:tabular-nums; font-size:14px; opacity:.9; min-width:64px; text-align:right; }
+
+  .grid { display:grid; gap:20px; grid-template-columns:1.2fr 1fr; margin-top:22px; }
+  .now { grid-row:span 2; min-height:470px; padding:34px; display:flex; flex-direction:column; justify-content:space-between; }
+  .now canvas { position:absolute; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; }
+  .label { font-size:13px; letter-spacing:.1em; text-transform:uppercase; opacity:.85; }
+  .temp { font-size:clamp(88px,14vw,150px); font-weight:200; letter-spacing:-.06em; line-height:1; margin:6px 0; font-variant-numeric:tabular-nums; }
+  .now h1 { margin:0; font-size:26px; font-weight:600; } .now p { margin:6px 0 0; opacity:.9; }
+  .fade { transition:opacity .35s; } .fade.out { opacity:0; }
+  .btn { align-self:flex-start; display:inline-block; padding:12px 22px; border-radius:99px; color:#fff; text-decoration:none; font-weight:600; font-size:14px; transition:transform .2s, background .2s; }
+  .btn:hover { background:rgba(255,255,255,.3); transform:scale(1.04); }
+  .card { padding:22px 24px; }
+  .card h2 { margin:0 0 12px; font-size:15px; font-weight:600; opacity:.92; }
+  .spark { position:relative; height:84px; } .spark canvas { position:absolute; inset:0; width:100%; height:100%; }
+  .hours { display:flex; justify-content:space-between; font-size:13px; opacity:.9; margin-top:6px; } .hours span { flex:1; text-align:center; }
+  .player { display:flex; gap:16px; align-items:center; }
+  .cover { width:68px; height:68px; border-radius:18px; flex:none; position:relative; background:conic-gradient(from 0deg,#fde047,#fb7185,#a78bfa,#38bdf8,#fde047); animation:spin 8s linear infinite; box-shadow:0 6px 20px rgba(0,0,0,.3); }
+  .cover::after { content:""; position:absolute; inset:24px; border-radius:50%; background:rgba(20,10,60,.7); border:1px solid rgba(255,255,255,.5); }
+  .paused .cover { animation-play-state:paused; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .player .info { flex:1; min-width:0; } .player strong { display:block; } .player small { opacity:.8; }
+  .play { width:48px; height:48px; border-radius:50%; border:1px solid rgba(255,255,255,.4); background:rgba(255,255,255,.2); cursor:pointer; display:grid; place-items:center; transition:transform .2s; flex:none; }
+  .play:hover { transform:scale(1.1); } .play svg { width:20px; height:20px; fill:#fff; }
+  .viz { height:64px; margin-top:12px; } .viz canvas { width:100%; height:100%; display:block; }
+  .time { display:flex; justify-content:space-between; font-size:12px; opacity:.8; font-variant-numeric:tabular-nums; margin-top:4px; }
+  .prog { height:5px; border-radius:9px; background:rgba(255,255,255,.25); margin-top:6px; overflow:hidden; } .prog i { display:block; height:100%; width:0; background:#fff; border-radius:9px; }
+  footer { text-align:center; margin-top:30px; font-size:13px; opacity:.75; }
+  @media (max-width:760px) { .grid { grid-template-columns:1fr; } .now { grid-row:auto; min-height:380px; } #clock, .logo { display:none; } nav { justify-content:center; } }
+  @media (prefers-reduced-motion:reduce) { *, *::after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="app">
+  <nav class="glass" style="--i:0"><span class="logo">aura</span>
+    <div class="seg" id="seg" role="tablist" aria-label="날씨 선택"><div class="pill" id="pill"></div>
+      <button role="tab" data-m="clear" aria-selected="true">맑음</button><button role="tab" data-m="rain">비</button><button role="tab" data-m="snow">눈</button></div>
+    <span id="clock">--:--</span></nav>
+
+  <div class="grid">
+    <section class="glass now" style="--i:1"><canvas id="fx"></canvas>
+      <div><div class="label">서울 · 지금</div><div class="temp"><span id="temp">0</span>°</div>
+        <h1 class="fade" id="title">맑음</h1><p class="fade" id="desc"></p></div>
+      <a class="glass btn" href="#" style="animation:none">오늘 코디 추천 보기</a>
+    </section>
+    <section class="glass card" style="--i:2"><h2>시간별 예보</h2>
+      <div class="spark"><canvas id="spark"></canvas></div><div class="hours" id="hours"></div></section>
+    <section class="glass card" id="pcard" style="--i:3"><h2>지금 어울리는 음악 <small style="font-weight:400;opacity:.7">· 시각화 데모(소리 없음)</small></h2>
+      <div class="player"><div class="cover"></div><div class="info"><strong class="fade" id="song">Golden Hour</strong><small>Aura Sessions</small></div>
+        <button class="play" id="play" aria-label="재생 또는 일시정지"></button></div>
+      <div class="viz"><canvas id="viz"></canvas></div>
+      <div class="prog"><i id="bar"></i></div><div class="time"><span id="cur">0:00</span><span>3:24</span></div></section>
+  </div>
+  <footer>글래스모피즘 데모 · backdrop-filter + Canvas 배경 · 날씨 파티클 · 오디오 비주얼라이저</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const dpr = Math.min(devicePixelRatio || 1, 2);
+const fit = c => { const r = c.getBoundingClientRect(); c.width = Math.max(1, r.width * dpr); c.height = Math.max(1, r.height * dpr); return [r.width, r.height]; };
+const loop = fn => { if (reduce) { fn(0); return; } const tick = t => { fn(t); requestAnimationFrame(tick); }; requestAnimationFrame(tick); };
+const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const mix = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k);
+const rgb = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+
+const MODES = {
+  clear: { temp: 24, title: '맑음', desc: '햇살 좋은 오후, 선글라스를 챙기세요', song: 'Golden Hour', hrs: [24, 25, 26, 25, 23, 21, 19, 18],
+    base: ['#1e3a8a', '#7c3aed'], orbs: ['#fbbf24', '#fb7185', '#38bdf8', '#f472b6', '#fde68a'] },
+  rain:  { temp: 17, title: '비', desc: '오후 내내 이어져요. 우산 필수', song: 'Blue Hour', hrs: [17, 16, 16, 15, 15, 14, 14, 13],
+    base: ['#0b1220', '#1e3a5f'], orbs: ['#38bdf8', '#6366f1', '#0ea5e9', '#818cf8', '#22d3ee'] },
+  snow:  { temp: -2, title: '눈', desc: '길이 미끄러워요. 천천히 걸으세요', song: 'Silent Snow', hrs: [-2, -3, -3, -4, -4, -5, -4, -3],
+    base: ['#1e293b', '#475569'], orbs: ['#e0f2fe', '#a5b4fc', '#f1f5f9', '#7dd3fc', '#c7d2fe'] }
+};
+let mode = 'clear';
+const cur = { base: MODES.clear.base.map(hex), orbs: MODES.clear.orbs.map(hex), temp: 24, hrs: [...MODES.clear.hrs] };
+
+// 배경 캔버스: 마우스 쪽으로 살짝 끌려오는 색 덩어리
+const bg = $('bg'), xb = bg.getContext('2d'); let bW, bH; const ms = { x: .5, y: .5, tx: .5, ty: .5 };
+const sizeB = () => [bW, bH] = fit(bg); sizeB(); addEventListener('resize', () => { sizeB(); sizeF(); sizeS(); sizeV(); });
+addEventListener('pointermove', e => { ms.tx = e.clientX / innerWidth; ms.ty = e.clientY / innerHeight; });
+loop(t => {
+  t /= 1000; const T = MODES[mode]; ms.x += (ms.tx - ms.x) * .05; ms.y += (ms.ty - ms.y) * .05;
+  cur.base = cur.base.map((c, i) => mix(c, hex(T.base[i]), .04)); cur.orbs = cur.orbs.map((c, i) => mix(c, hex(T.orbs[i]), .04));
+  xb.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const g = xb.createLinearGradient(0, 0, bW * .4, bH); g.addColorStop(0, rgb(cur.base[0])); g.addColorStop(1, rgb(cur.base[1])); xb.fillStyle = g; xb.fillRect(0, 0, bW, bH);
+  cur.orbs.forEach((c, i) => {
+    const x = (.5 + .36 * Math.sin(t * .5 + i * 1.9) + (ms.x - .5) * (.15 + i * .06)) * bW, y = (.5 + .36 * Math.cos(t * .42 + i * 2.4) + (ms.y - .5) * (.15 + i * .06)) * bH, r = Math.max(bW, bH) * (.2 + (i % 3) * .06);
+    const rg = xb.createRadialGradient(x, y, 0, x, y, r); rg.addColorStop(0, rgb(c, .95)); rg.addColorStop(.6, rgb(c, .35)); rg.addColorStop(1, rgb(c, 0)); xb.fillStyle = rg; xb.fillRect(0, 0, bW, bH);
+  });
+});
+
+// 메인 카드 날씨 파티클 (비 / 눈 / 햇살 먼지)
+const fx = $('fx'), xf = fx.getContext('2d'); let fW, fH, parts = [], ripples = [];
+const seed = () => { const n = { rain: 130, snow: 90, clear: 45 }[mode]; parts = Array.from({ length: n }, () => ({ x: Math.random() * fW, y: Math.random() * fH, v: Math.random(), r: Math.random() })); ripples = []; };
+const sizeF = () => { [fW, fH] = fit(fx); seed(); }; sizeF();
+loop(t => {
+  xf.setTransform(dpr, 0, 0, dpr, 0, 0); xf.clearRect(0, 0, fW, fH);
+  if (mode === 'rain') {
+    xf.strokeStyle = 'rgba(200,225,255,.6)'; xf.lineWidth = 1.2; xf.lineCap = 'round'; xf.beginPath();
+    parts.forEach(p => { const len = 10 + p.v * 14; xf.moveTo(p.x, p.y); xf.lineTo(p.x - 2, p.y + len); p.y += 9 + p.v * 11; p.x -= 1.2;
+      if (p.y > fH) { if (Math.random() < .35) ripples.push({ x: p.x, y: fH - 8 - Math.random() * 30, r: 0 }); p.y = -20; p.x = Math.random() * (fW + 40); } });
+    xf.stroke(); ripples = ripples.filter(r => r.r < 22);
+    ripples.forEach(r => { r.r += .6; xf.strokeStyle = `rgba(200,225,255,${.5 * (1 - r.r / 22)})`; xf.beginPath(); xf.ellipse(r.x, r.y, r.r * 1.6, r.r * .5, 0, 0, 7); xf.stroke(); });
+  } else if (mode === 'snow') {
+    xf.fillStyle = 'rgba(255,255,255,.88)';
+    parts.forEach(p => { xf.beginPath(); xf.arc(p.x, p.y, 1.5 + p.r * 2.6, 0, 7); xf.fill(); p.y += .6 + p.v * 1.2; p.x += Math.sin(t / 900 + p.r * 10) * .6; if (p.y > fH + 5) { p.y = -5; p.x = Math.random() * fW; } });
+  } else {
+    parts.forEach(p => { const a = .25 + .5 * Math.abs(Math.sin(t / 1100 + p.r * 9)); xf.fillStyle = `rgba(255,236,170,${a})`; xf.beginPath(); xf.arc(p.x, p.y, 1.2 + p.r * 2.4, 0, 7); xf.fill(); p.y -= .25 + p.v * .45; p.x += Math.sin(t / 1500 + p.r * 7) * .3; if (p.y < -5) { p.y = fH + 5; p.x = Math.random() * fW; } });
+  }
+});
+
+// 시간별 예보 스파크라인 (모드가 바뀌면 곡선이 부드럽게 변형)
+const sp = $('spark'), xs = sp.getContext('2d'); let sW, sH; const sizeS = () => [sW, sH] = fit(sp); sizeS();
+const now = new Date(); $('hours').innerHTML = Array.from({ length: 8 }, (_, i) => `<span>${i ? (now.getHours() + i * 2) % 24 + '시' : '지금'}</span>`).join('');
+let sT = null;
+loop(t => {
+  if (sT === null) sT = t; const k = reduce ? 1 : 1 - Math.pow(1 - Math.min(1, (t - sT) / 1200), 3), T = MODES[mode];
+  cur.hrs = cur.hrs.map((v, i) => v + (T.hrs[i] - v) * .07);
+  const lo = Math.min(...cur.hrs) - 3, hi = Math.max(...cur.hrs) + 3;
+  const pts = cur.hrs.map((v, i) => [12 + i * (sW - 24) / 7, sH - 8 - ((v - lo) / (hi - lo)) * (sH - 22) * k]);
+  xs.setTransform(dpr, 0, 0, dpr, 0, 0); xs.clearRect(0, 0, sW, sH);
+  const path = () => { xs.beginPath(); xs.moveTo(...pts[0]); for (let i = 1; i < pts.length; i++) { const [px, py] = pts[i - 1], [x, y] = pts[i], mx = (px + x) / 2; xs.bezierCurveTo(mx, py, mx, y, x, y); } };
+  path(); xs.lineTo(sW - 12, sH); xs.lineTo(12, sH); xs.closePath(); const g = xs.createLinearGradient(0, 0, 0, sH); g.addColorStop(0, 'rgba(255,255,255,.35)'); g.addColorStop(1, 'rgba(255,255,255,0)'); xs.fillStyle = g; xs.fill();
+  path(); xs.strokeStyle = '#fff'; xs.lineWidth = 2.5; xs.lineCap = 'round'; xs.stroke();
+  xs.font = '600 12px system-ui'; xs.textAlign = 'center';
+  pts.forEach((p, i) => { xs.fillStyle = '#fff'; xs.beginPath(); xs.arc(p[0], p[1], 3.5, 0, 7); xs.fill(); xs.fillText(Math.round(cur.hrs[i]) + '°', p[0], p[1] - 9); });
+});
+
+// 현재 기온 숫자 카운트 + 시계
+loop(() => { cur.temp += (MODES[mode].temp - cur.temp) * .08; $('temp').textContent = Math.round(cur.temp); });
+const tick = () => { const d = new Date(); $('clock').textContent = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }); }; tick(); setInterval(tick, 10000);
+
+// 날씨 전환
+function setMode(m) {
+  mode = m; const T = MODES[m]; seed(); sT = null;
+  $('pill').style.transform = `translateX(${['clear', 'rain', 'snow'].indexOf(m) * 100}%)`;
+  document.querySelectorAll('#seg button').forEach(b => b.setAttribute('aria-selected', b.dataset.m === m));
+  const els = ['title', 'desc', 'song'].map($); els.forEach(e => e.classList.add('out'));
+  setTimeout(() => { $('title').textContent = T.title; $('desc').textContent = T.desc; $('song').textContent = T.song; els.forEach(e => e.classList.remove('out')); }, 300);
+}
+$('seg').addEventListener('click', e => { if (e.target.dataset.m) setMode(e.target.dataset.m); });
+$('title').textContent = MODES.clear.title; $('desc').textContent = MODES.clear.desc;
+// 데모 자동 전환: 사용자가 만지기 전에는 8초마다 날씨가 바뀐다
+let auto = !reduce, ai = 0; document.addEventListener('pointerdown', () => auto = false);
+setInterval(() => { if (auto) setMode(['clear', 'rain', 'snow'][++ai % 3]); }, 8000);
+
+// 마우스 위치에 따라 빛 반사 + 살짝 기울기
+document.querySelectorAll('.glass').forEach(el => {
+  el.addEventListener('pointermove', e => { const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+    el.style.setProperty('--mx', x * 100 + '%'); el.style.setProperty('--my', y * 100 + '%');
+    if (!reduce && (el.classList.contains('card') || el.classList.contains('now'))) el.style.transform = `perspective(1000px) rotateX(${(.5 - y) * 4}deg) rotateY(${(x - .5) * 5}deg)`; });
+  el.addEventListener('pointerleave', () => el.style.transform = '');
+});
+
+// 오디오 비주얼라이저 (소리 없이 모양만)
+const vz = $('viz'), xv = vz.getContext('2d'); let vW, vH, playing = true, played = 0, lastV = 0; const N = 40, lv = Array(N).fill(.05);
+const sizeV = () => [vW, vH] = fit(vz); sizeV();
+const ICON = { pause: '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>', play: '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>' };
+const paintPlay = () => { $('play').innerHTML = playing ? ICON.pause : ICON.play; $('pcard').classList.toggle('paused', !playing); }; paintPlay();
+$('play').onclick = () => { playing = !playing; paintPlay(); };
+loop(t => {
+  const s = t / 1000, dt = lastV ? (t - lastV) / 1000 : 0; lastV = t;
+  if (playing) played = (played + dt) % 204; $('bar').style.width = played / 204 * 100 + '%'; $('cur').textContent = `${Math.floor(played / 60)}:${String(Math.floor(played % 60)).padStart(2, '0')}`;
+  xv.setTransform(dpr, 0, 0, dpr, 0, 0); xv.clearRect(0, 0, vW, vH);
+  const beat = Math.pow(Math.abs(Math.sin(s * 3.6)), 8), bw = vW / N;
+  for (let i = 0; i < N; i++) {
+    const wave = .5 + .5 * Math.sin(s * 2.2 + i * .55) * Math.cos(s * 1.3 + i * .23), edge = Math.sin(i / (N - 1) * Math.PI);
+    const goal = playing ? .08 + (.55 * wave + .35 * beat) * (.4 + .6 * edge) : .06; lv[i] += (goal - lv[i]) * .18;
+    const h = Math.max(4, lv[i] * vH), g = xv.createLinearGradient(0, vH - h, 0, vH); g.addColorStop(0, '#fff'); g.addColorStop(1, 'rgba(255,170,220,.7)');
+    xv.fillStyle = g; xv.beginPath(); xv.roundRect(i * bw + 1.5, vH - h, bw - 3, h, 3); xv.fill();
+  }
+});
+</script>
+</body>
+</html>
