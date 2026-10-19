@@ -24,6 +24,18 @@
     <p>데모는 모두 이 저장소에서 직접 만든 정적 페이지입니다. 외부 사이트를 복제하지 않았습니다.</p>
   </footer>
 
+  <dialog id="detail" class="detail" aria-label="트렌드 상세">
+    <div class="sheet">
+      <button class="d-close" id="d-close" aria-label="닫기">✕</button>
+      <div class="hero-prev" data-fit>
+        <iframe id="d-frame" title="데모 미리보기" tabindex="-1"></iframe>
+        <div class="hero-fade"></div>
+        <div class="hero-cap" id="d-cap"></div>
+      </div>
+      <div class="d-body" id="d-body"></div>
+    </div>
+  </dialog>
+
   <dialog id="viewer" class="viewer" aria-label="데모 보기">
     <div class="viewer-bar">
       <strong id="v-title"></strong>

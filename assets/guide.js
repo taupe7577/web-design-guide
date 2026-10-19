@@ -35,7 +35,7 @@ const url = t => `demos/${t.slug}/index.html`;
 const cards = document.getElementById('cards');
 cards.innerHTML = TRENDS.map((t, i) => `
   <article class="card">
-    <button class="thumb" data-i="${i}" aria-label="${esc(t.name)} 데모 크게 보기">
+    <button class="thumb" data-fit data-i="${i}" aria-label="${esc(t.name)} 상세 보기">
       <iframe data-src="${url(t)}" title="${esc(t.name)} 미리보기" tabindex="-1" loading="lazy"></iframe>
     </button>
     <div class="meta">
@@ -46,14 +46,15 @@ cards.innerHTML = TRENDS.map((t, i) => `
     </div>
   </article>`).join('');
 
-// 썸네일: 1440px 폭으로 렌더한 뒤 카드 폭에 맞춰 축소한다.
-function fitThumbs() {
-  document.querySelectorAll('.thumb').forEach(th => {
-    th.querySelector('iframe').style.transform = `scale(${th.clientWidth / 1440})`;
+// 미리보기: 1440px 폭으로 렌더한 뒤 [data-fit] 요소 폭에 맞춰 축소한다. (카드 썸네일, 상세 시트 상단, 추천 카드 공용)
+function fitAll() {
+  document.querySelectorAll('[data-fit]').forEach(el => {
+    const w = el.clientWidth;
+    if (w) el.querySelector('iframe').style.transform = `scale(${w / 1440})`;
   });
 }
-fitThumbs();
-addEventListener('resize', fitThumbs);
+fitAll();
+addEventListener('resize', fitAll);
 
 // 화면에 들어올 때만 iframe 을 불러와 초기 로딩을 가볍게 한다.
 const io = new IntersectionObserver(es => es.forEach(e => {
@@ -80,13 +81,60 @@ function openViewer(i) {
   setWidth('100%');
   frame.src = url(t);
   viewer.showModal();
-  history.replaceState(null, '', '#' + t.slug);
 }
-cards.addEventListener('click', e => { const b = e.target.closest('.thumb'); if (b) openViewer(+b.dataset.i); });
 document.querySelector('.seg').addEventListener('click', e => { if (e.target.dataset.w) setWidth(e.target.dataset.w); });
 $('v-close').onclick = () => viewer.close();
-viewer.addEventListener('close', () => { frame.src = 'about:blank'; history.replaceState(null, '', location.pathname); });
+viewer.addEventListener('close', () => { frame.src = 'about:blank'; });
 
-// 공유 링크(#bento 등)로 들어오면 바로 열기
+// 상세 시트 (OTT 스타일): 위에는 살아 있는 페이지 미리보기, 아래에는 디자인 설명
+const detail = $('detail'), dFrame = $('d-frame');
+let cur = 0;
+function openDetail(i) {
+  const t = TRENDS[cur = i];
+  $('d-cap').innerHTML = `
+    <span class="no">TREND ${String(i + 1).padStart(2, '0')}</span>
+    <h2>${esc(t.name)}</h2>
+    <div class="acts">
+      <button class="go" data-act="play">▶ 직접 체험하기</button>
+      <a class="ghost" href="${url(t)}" target="_blank" rel="noopener">새 탭으로 열기 ↗</a>
+    </div>`;
+  $('d-body').innerHTML = `
+    <div class="d-grid">
+      <div>
+        <p class="d-sum">${esc(t.summary)}</p>
+        <h3>언제 쓰나</h3><p>${esc(t.when)}</p>
+      </div>
+      <dl>
+        <dt>키워드</dt><dd>${t.tags.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</dd>
+        <dt>핵심 기법</dt><dd>${t.tech.length}가지</dd>
+      </dl>
+    </div>
+    <h3>핵심 기법</h3>
+    <ol class="tech">${t.tech.map((x, n) => `<li><b>${n + 1}</b><span>${esc(x)}</span></li>`).join('')}</ol>
+    <div class="warn"><strong>주의할 점</strong><p>${esc(t.caution)}</p></div>
+    <h3>다른 트렌드</h3>
+    <div class="more">${TRENDS.map((o, j) => j === i ? '' : `
+      <button class="mini" data-go="${j}">
+        <span class="mini-prev" data-fit><iframe src="${url(o)}" title="${esc(o.name)} 미리보기" tabindex="-1"></iframe></span>
+        <span class="mini-name">${esc(o.name)}</span>
+      </button>`).join('')}</div>`;
+  dFrame.src = url(t);
+  if (!detail.open) { detail.showModal(); document.body.style.overflow = 'hidden'; }
+  detail.scrollTop = 0;
+  history.replaceState(null, '', '#' + t.slug);
+  fitAll();
+}
+cards.addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openDetail([...cards.children].indexOf(c)); });
+detail.addEventListener('click', e => {
+  if (e.target === detail || e.target.closest('#d-close')) return detail.close();   // 바깥 어두운 영역을 눌러도 닫힌다
+  if (e.target.closest('[data-act="play"]') || e.target.closest('.hero-prev') && !e.target.closest('a')) return openViewer(cur);
+  const m = e.target.closest('[data-go]'); if (m) openDetail(+m.dataset.go);
+});
+detail.addEventListener('close', () => {
+  dFrame.src = 'about:blank'; document.body.style.overflow = '';
+  history.replaceState(null, '', location.pathname);
+});
+
+// 공유 링크(#bento 등)로 들어오면 상세 시트를 바로 연다
 const first = TRENDS.findIndex(t => '#' + t.slug === location.hash);
-if (first >= 0) openViewer(first);
+if (first >= 0) openDetail(first);
