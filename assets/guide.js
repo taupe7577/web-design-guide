@@ -67,9 +67,23 @@ document.querySelectorAll('.thumb').forEach(t => io.observe(t));
 // 미리보기 재생 제어: 마우스를 올린(또는 포커스된) 하나만 움직인다
 const send = (el, demo) => { const f = el.querySelector('iframe'); if (f && f.contentWindow) f.contentWindow.postMessage({ demo }, '*'); };
 const preview = e => e.target.closest('.thumb, .mini');
-document.addEventListener('pointerover', e => { const el = preview(e); if (el && !el.contains(e.relatedTarget)) send(el, 'play'); });
+let px = 0, py = 0, hoverGate = null, quietUntil = 0;
+document.addEventListener('pointermove', e => { px = e.clientX; py = e.clientY; }, { passive: true });
+// 시트·뷰어가 열려 있거나 막 닫힌 직후에는 재생하지 않는다 (포커스 복원, 레이아웃 변화로 생기는 가짜 이벤트 차단)
+const quiet = () => detail.open || viewer.open || performance.now() < quietUntil;
+const pauseThumbs = () => document.querySelectorAll('.thumb, .mini').forEach(t => send(t, 'pause'));
+function settleThumbs() {
+  quietUntil = performance.now() + 400; hoverGate = { x: px, y: py };   // 닫은 자리에서 마우스가 실제로 움직여야 호버로 인정한다
+  pauseThumbs(); requestAnimationFrame(pauseThumbs);
+}
+document.addEventListener('pointerover', e => {
+  const el = preview(e); if (!el || el.contains(e.relatedTarget) || quiet()) return;
+  if (hoverGate) { if (Math.hypot(e.clientX - hoverGate.x, e.clientY - hoverGate.y) < 6) return; hoverGate = null; }
+  send(el, 'play');
+});
 document.addEventListener('pointerout', e => { const el = preview(e); if (el && !el.contains(e.relatedTarget)) send(el, 'pause'); });
-document.addEventListener('focusin', e => { const el = preview(e); if (el) send(el, 'play'); });
+// 키보드로 포커스한 경우에만 재생한다. 마우스로 누른 버튼에 포커스가 복원되는 것은 호버가 아니다.
+document.addEventListener('focusin', e => { const el = preview(e); if (el && !quiet() && e.target.matches(':focus-visible')) send(el, 'play'); });
 document.addEventListener('focusout', e => { const el = preview(e); if (el) send(el, 'pause'); });
 
 // 뷰어
@@ -148,8 +162,9 @@ detail.addEventListener('click', e => {
 function cleanupDetail() {
   dFrame.src = 'about:blank'; $('d-body').innerHTML = ''; document.body.style.overflow = '';
   history.replaceState(null, '', location.pathname);
+  settleThumbs();   // 닫힌 뒤 카드가 재생 상태로 남지 않게 한다
 }
-function closeDetail() { detail.close(); cleanupDetail(); }
+function closeDetail() { settleThumbs(); detail.close(); cleanupDetail(); }
 detail.addEventListener('close', cleanupDetail);
 
 // 히어로는 시트가 열려 있고, 뷰어가 닫혀 있고, 화면에 보일 때만 재생한다
