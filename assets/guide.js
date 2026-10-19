@@ -86,6 +86,14 @@ document.addEventListener('pointerout', e => { const el = preview(e); if (el && 
 document.addEventListener('focusin', e => { const el = preview(e); if (el && !quiet() && e.target.matches(':focus-visible')) send(el, 'play'); });
 document.addEventListener('focusout', e => { const el = preview(e); if (el) send(el, 'pause'); });
 
+// iframe 은 location.replace 로 이동한다. src 를 바꾸면 뒤로가기 기록이 쌓여, 뒤로가기가 페이지 대신 iframe 만 되돌린다.
+function navFrame(f, src) {
+  const abs = new URL(src, location.href).href;
+  try { f.contentWindow.location.replace(abs); } catch { f.src = abs; }
+}
+// 모달은 열 때 기록을 한 칸 쌓는다. 뒤로가기가 모달을 닫게 하려고 현재 상태를 기록에서 읽는다.
+const mode = () => (history.state && history.state.m) || null;
+
 // 뷰어
 const $ = id => document.getElementById(id);
 const viewer = $('viewer'), frame = $('v-frame');
@@ -103,14 +111,18 @@ function openViewer(i) {
     <h3>핵심 기법</h3><ul>${t.tech.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
     <h3>유의 사항</h3><p>${esc(t.caution)}</p>`;
   setWidth('100%');
-  frame.src = url(t);
+  navFrame(frame, url(t));
   viewer.showModal();
+  history.pushState({ m: 'viewer' }, '', '#' + t.slug);
   syncHero();   // 뷰어가 열려 있는 동안 뒤쪽 히어로는 멈춘다
 }
 document.querySelector('.seg').addEventListener('click', e => { if (e.target.dataset.w) setWidth(e.target.dataset.w); });
 // 닫는 코드에서 직접 정리하고, Esc 로 닫힌 경우는 close 이벤트로도 정리한다 (두 번 불려도 안전)
-function cleanupViewer() { frame.src = 'about:blank'; syncHero(); }
-$('v-close').onclick = () => { viewer.close(); cleanupViewer(); };
+function cleanupViewer() { navFrame(frame, 'about:blank'); syncHero(); }
+// 기록에 쌓인 항목이 있으면 뒤로가기로 닫아서 기록과 화면을 맞춘다 (실제 닫기는 popstate 에서 처리)
+function closeViewer() { if (mode() === 'viewer') history.back(); else { viewer.close(); cleanupViewer(); } }
+$('v-close').onclick = closeViewer;
+viewer.addEventListener('cancel', e => { e.preventDefault(); closeViewer(); });   // Esc
 viewer.addEventListener('close', cleanupViewer);
 
 // 상세 시트 (OTT 스타일): 위에는 살아 있는 페이지 미리보기, 아래에는 디자인 설명
@@ -145,11 +157,13 @@ function openDetail(i) {
         <span class="mini-prev" data-fit><iframe src="${still(o)}" title="${esc(o.name)} 미리보기" tabindex="-1"></iframe></span>
         <span class="mini-name">${esc(o.name)}</span>
       </button>`).join('')}</div>`;
-  dFrame.src = url(t) + '?thumb';   // 시트의 히어로는 계속 재생하되 경량 모드로 돌린다
+  navFrame(dFrame, url(t) + '?thumb');   // 시트의 히어로는 계속 재생하되 경량 모드로 돌린다
   document.querySelectorAll('.thumb').forEach(th => send(th, 'pause'));   // 뒤쪽 카드는 확실히 멈춘다
-  if (!detail.open) { detail.showModal(); document.body.style.overflow = 'hidden'; }
+  const wasOpen = detail.open;
+  if (!wasOpen) { detail.showModal(); document.body.style.overflow = 'hidden'; }
   detail.scrollTop = 0;
-  history.replaceState(null, '', '#' + t.slug);
+  // 처음 열 때만 기록을 쌓고, 다른 트렌드로 넘어갈 때는 같은 항목을 바꾼다 (뒤로가기 한 번이면 닫힌다)
+  if (wasOpen) history.replaceState({ m: 'detail' }, '', '#' + t.slug); else history.pushState({ m: 'detail' }, '', '#' + t.slug);
   fitAll();
 }
 cards.addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openDetail([...cards.children].indexOf(c)); });
@@ -160,12 +174,20 @@ detail.addEventListener('click', e => {
 });
 // 닫으면 히어로와 '다른 트렌드' 미리보기 iframe 을 모두 제거해 메모리와 타이머를 돌려준다
 function cleanupDetail() {
-  dFrame.src = 'about:blank'; $('d-body').innerHTML = ''; document.body.style.overflow = '';
-  history.replaceState(null, '', location.pathname);
+  navFrame(dFrame, 'about:blank'); $('d-body').innerHTML = ''; document.body.style.overflow = '';
+  if (mode()) history.replaceState(null, '', location.pathname);   // 기록이 어긋난 채 닫힌 경우만 정리한다
   settleThumbs();   // 닫힌 뒤 카드가 재생 상태로 남지 않게 한다
 }
-function closeDetail() { settleThumbs(); detail.close(); cleanupDetail(); }
+function closeDetail() { settleThumbs(); if (mode()) history.back(); else { detail.close(); cleanupDetail(); } }
+detail.addEventListener('cancel', e => { if (viewer.open) return; e.preventDefault(); closeDetail(); });   // Esc
 detail.addEventListener('close', cleanupDetail);
+// 뒤로가기/앞으로가기: 기록 상태에 맞춰 뷰어와 시트를 닫는다
+addEventListener('popstate', () => {
+  const m = mode();
+  if (m !== 'viewer' && viewer.open) { viewer.close(); cleanupViewer(); }
+  if (!m && detail.open) { detail.close(); cleanupDetail(); }
+  else if (m && !detail.open) history.replaceState(null, '', location.pathname);   // 닫힌 상태에서 앞으로가기 한 경우
+});
 
 // 히어로는 시트가 열려 있고, 뷰어가 닫혀 있고, 화면에 보일 때만 재생한다
 const heroEl = document.querySelector('.hero-prev');
@@ -176,4 +198,4 @@ dFrame.addEventListener('load', syncHero);
 
 // 공유 링크(#bento 등)로 들어오면 상세 시트를 바로 연다
 const first = TRENDS.findIndex(t => '#' + t.slug === location.hash);
-if (first >= 0) openDetail(first);
+if (first >= 0) { history.replaceState(null, '', location.pathname); openDetail(first); }   // 해시를 정리해 둬야 뒤로가기가 깔끔하게 닫는다
